@@ -1,3 +1,4 @@
+# Main function that loads in data and produces all results
 runBorealis <- function(inDir,
                 suffix="_merged.cov.gz.CpG_report.merged_CpG_evidence.cov.gz",
                 nThreads=8,minDepth=4,minSamps=5,timeout=10,laplaceSmooth=TRUE,
@@ -36,9 +37,10 @@ runBorealis <- function(inDir,
     return(list(BSobj=BSobj,result=result))
 }
 
+# Function to load data from bismark outputs
+# assumes following pattern for full paths to bismark coverage gz files:
+# ${inDir}/${sampleName}/${sampleName}${suffix}
 loadBismarkData <- function(inDir,suffix,chrs){
-    # assumes following pattern for full paths to bismark coverage gz files:
-    # ${inDir}/${sampleName}/${sampleName}${suffix}
     message("loading in Bismark data.")
     samples <- list.files(inDir)
 
@@ -64,6 +66,8 @@ loadBismarkData <- function(inDir,suffix,chrs){
                     n=as.array(getCoverage(BSobj, type="Cov")))
 }
 
+# Function to build the beta-binomial models for each CpG using the data from
+# the entire cohort.
 buildModels <- function(BSobj,nThreads,minDepth=4,minSamps=5,
                         timeout=10,laplaceSmooth=TRUE) {
     ## grab counts
@@ -112,6 +116,7 @@ buildModels <- function(BSobj,nThreads,minDepth=4,minSamps=5,
     return(df)
 }
 
+# Helper function for model building at each CpG site
 fitGamlss <- function(x1,n1,minDepth,laplaceSmooth,timeout){
     # filter samples with low depth
     x1 <- x1[n1 > minDepth]
@@ -138,6 +143,8 @@ fitGamlss <- function(x1,n1,minDepth,laplaceSmooth,timeout){
     return(pred)
 }
 
+# Helper function to write the results for each individual in cohort after model
+# has been built.
 writeResults <- function(BSobj,modelDF,outprefix,chrs,minObsDepth=10){
 
     nreps1 <- ncol(BSobj$x)
@@ -146,7 +153,8 @@ writeResults <- function(BSobj,modelDF,outprefix,chrs,minObsDepth=10){
     message("Writing results for each sample to file.")
     result <- foreach(rep=seq_len(nreps1), .combine=c,
                         .errorhandling = "remove",.multicombine=TRUE) %dopar% {
-        df <- data.frame(chr=as.vector(BSobj$chr,mode="character"),pos=BSobj$pos,
+        df <- data.frame(chr=as.vector(BSobj$chr,mode="character"),
+                            pos=BSobj$pos,
                             x = as.integer(BSobj$x[,rep]),
                             n=as.integer(BSobj$n[,rep]))
 
@@ -167,6 +175,8 @@ writeResults <- function(BSobj,modelDF,outprefix,chrs,minObsDepth=10){
     }
 }
 
+# Helper function to produce p-values and effect sizes from a model given the
+# count data in one sample.
 computePvalsAndEffSize <- function(df){
     # Compute p-values and effect size statistics
     df$leftTailProb <- pmax(0,gamlss.dist::pBB(df$x,mu=df$mu,
@@ -187,6 +197,7 @@ computePvalsAndEffSize <- function(df){
     return(df)
 }
 
+# Main function to run a single new sample against existing model from cohort.
 runSingleNewSample <- function(inFile,outFile,minObsDepth=10,
                                 modelFile="CpG_model.csv"){
     # read in sample data
