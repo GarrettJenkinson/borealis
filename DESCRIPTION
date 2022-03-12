@@ -1,0 +1,22 @@
+Package: borealis
+Type: Package
+Title: Bisulfite-seq OutlieR mEthylation At singLe-sIte reSolution
+Version: 0.1.0
+Authors@R: person(given = "Garrett",
+           family = "Jenkinson",
+           role = c("aut", "cre"),
+           email = "gargar934@gmail.com",
+           comment = c(ORCID = "0000-0003-2548-098X"))
+Depends: R (>= 4.1.0), Biobase
+Imports:  doMC, purrr, plyr, foreach, gamlss, gamlss.dist, bsseq, 
+    methods, DSS, R.utils, utils, stats
+Description: Borealis is an R library performing outlier analysis for
+    count-based bisulfite sequencing data. It detectes outlier
+    methylated CpG sites from bisulfite sequencing
+    (BS-seq). The core of Borealis is modeling Beta-Binomial distributions. This
+    can be useful for rare disease diagnoses. 
+License: GPL-3
+Encoding: UTF-8
+Suggests: BiocStyle, knitr, rmarkdown, RUnit, BiocGenerics
+VignetteBuilder: knitr
+biocViews: Sequencing, Coverage, DNAMethylation, DifferentialMethylation

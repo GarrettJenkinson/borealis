@@ -1,0 +1,19 @@
+import( doMC )
+import( purrr )
+import( plyr )
+import( foreach )
+import( gamlss )
+import( gamlss.dist )
+import( Biobase )
+import( bsseq )
+import(methods)
+import( DSS )
+import( R.utils )
+importFrom("stats", "na.omit")
+importFrom("utils", "read.csv", "read.table", "write.csv",
+               "write.table")
+export(
+       loadBismarkData,
+       runBorealis,
+       runSingleNewSample
+)
