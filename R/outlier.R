@@ -80,7 +80,7 @@ buildModels <- function(BSobj,nThreads,minDepth=4,minSamps=5,
 
     niter <- nrow(x)
     message('Looping over ',niter,
-                   ' positions in model building. It will take some time.')
+            ' positions in model building. It will take some time.')
     ind <- 1 # do this to stop Rcheck complaining
     df <- foreach(ind=seq_len(nThreads), .combine=rbind) %dopar% {
         # Subset the full data down to just this processor's data
@@ -134,7 +134,7 @@ fitGamlss <- function(x1,n1,minDepth,laplaceSmooth,timeout){
     fit <- R.utils::withTimeout( { purrr::quietly(gamlss::gamlss)(
                             cbind(x,n-x)~1,data=df,
                             family = BB(mu.link = "logit",sigma.link = "log")
-            )$result}, timeout=timeout, onTimeout="silent" )
+                        )$result}, timeout=timeout, onTimeout="silent" )
     if (!is.null(fit)){ # fit will be null if it timed out
         pred <- predictAll(fit,data=df[1,,drop=FALSE])
     } else{

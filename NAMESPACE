@@ -10,10 +10,9 @@ import(methods)
 import( DSS )
 import( R.utils )
 importFrom("stats", "na.omit")
-importFrom("utils", "read.csv", "read.table", "write.csv",
-               "write.table")
+importFrom("utils", "read.csv", "read.table", "write.csv", "write.table")
 export(
-       loadBismarkData,
-       runBorealis,
-       runSingleNewSample
+        loadBismarkData,
+        runBorealis,
+        runSingleNewSample
 )

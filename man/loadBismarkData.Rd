@@ -6,11 +6,12 @@ loadBismarkData(inDir, suffix, chrs)
 }
 \arguments{
 
-  \item{inDir}{\code{character(1)} Directory path to bismark results.}
+    \item{inDir}{\code{character(1)} Directory path to bismark results.}
 
-  \item{suffix}{\code{character(1)} File suffix for the bismark coverage files.}
+    \item{suffix}{\code{character(1)} File suffix for the bismark coverage
+    files.}
 
-  \item{chrs}{A character vector listing the chromosomes to be loaded.}
+    \item{chrs}{A character vector listing the chromosomes to be loaded.}
 
 }
 \description{

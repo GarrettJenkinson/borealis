@@ -3,10 +3,10 @@ Type: Package
 Title: Bisulfite-seq OutlieR mEthylation At singLe-sIte reSolution
 Version: 0.1.0
 Authors@R: person(given = "Garrett",
-           family = "Jenkinson",
-           role = c("aut", "cre"),
-           email = "gargar934@gmail.com",
-           comment = c(ORCID = "0000-0003-2548-098X"))
+            family = "Jenkinson",
+            role = c("aut", "cre"),
+            email = "gargar934@gmail.com",
+            comment = c(ORCID = "0000-0003-2548-098X"))
 Depends: R (>= 4.1.0), Biobase
 Imports:  doMC, purrr, plyr, foreach, gamlss, gamlss.dist, bsseq, 
     methods, DSS, R.utils, utils, stats
