@@ -2,12 +2,12 @@
 title: "Borealis outlier methylation detection"
 author:
 - name: Gavin Oliver
-    affiliation: Mayo Clinic
+  affiliation: Mayo Clinic
 - name: Garrett Jenkinson
-    affiliation: Mayo Clinic
+  affiliation: Mayo Clinic
 - name: Eric Klee
-    affiliation: Mayo Clinic
-    email: klee.eric@mayo.edu
+  affiliation: Mayo Clinic
+  email: klee.eric@mayo.edu
 package: packageName
 output:
     BiocStyle::html_document
