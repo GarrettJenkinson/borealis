@@ -26,9 +26,9 @@ Run a single new sample after modeling complete.
 }
 \examples{
 extdata <- system.file("extdata", package="borealis")
-runSingleNewSample(paste0(extdata,
-    '/bismark/pat1/pat1_merged.cov.gz.CpG_report.merged_CpG_evidence.cov.gz'),
-    'out.txt',modelFile=paste0(extdata,'/CpG_model_chr1.csv'))
+runSingleNewSample(file.path(extdata,'bismark','pat1',
+                'pat1_merged.cov.gz.CpG_report.merged_CpG_evidence.cov.gz'),
+    'out.txt',modelFile=file.path(extdata,'CpG_model_chr1.csv'))
 file.remove('out.txt')
 }
 \value{
