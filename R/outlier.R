@@ -250,8 +250,8 @@ plotCpGsite <- function(cpgSites, sampleOfInterest=NA,
         model <- modelDF %>% dplyr::filter(.data$chr==my_chr,
                                             .data$pos==my_start) %>%
                 dplyr::select(-c(1,2)) %>%
-                dplyr::mutate(alpha=.data$mu/.data$theta,
-                                beta=(1-.data$mu)/.data$theta)
+                dplyr::mutate(alpha=.data$mu/(.data$theta+1e-6),
+                                beta=(1-.data$mu)/(.data$theta+1e-6))
 
         # make binom confidence intervals for each samp's raw data
         df <- data.frame(samples=samps,lowerBnd=NA,est=NA,upperBnd=NA,
@@ -297,6 +297,6 @@ generatePlot <- function(df,model,sampleOfInterest){
             ggplot2::xlab("") + ggplot2::ylab("Model")
 
     # return a stacked plot
-    return(plot_grid(p2,p1,ncol=1,rel_heights = c(1,2)))
+    return(plot_grid(p2,p1,ncol=1,rel_heights = c(1,2),align="v"))
 }
 
