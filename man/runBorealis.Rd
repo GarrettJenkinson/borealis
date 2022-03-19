@@ -15,37 +15,43 @@ runBorealis(inDir,
     this assumes following pattern for full paths to bismark coverage gz files:
     \code{${inDir}/${sampleName}/${sampleName}${suffix}}}
 
-    \item{suffix}{\code{character(1)} File suffix for the bismark coverage
-    files.}
+    \item{suffix}{(optional) \code{character(1)} File suffix for the bismark
+    coverage files.}
 
-    \item{nThreads}{\code{numeric(1)} Number of compute threads to be used in
-    multithreading computations.}
+    \item{nThreads}{(optional) \code{numeric(1)} Number of compute threads to be
+    used in multithreading computations.}
 
-    \item{minDepth}{\code{numeric(1)} The minimum depth of coverage for sample
-    to go into modeling.}
+    \item{minDepth}{(optional) \code{numeric(1)} The minimum depth of coverage
+    for sample to go into modeling.}
 
-    \item{minSamps}{\code{numeric(1)} The minimum number of samples with
-    \code{minDepth} coverage required to build a model at a given CpG site.}
+    \item{minSamps}{(optional) \code{numeric(1)} The minimum number of samples
+    with \code{minDepth} coverage required to build a model at a given CpG
+    site.}
 
-    \item{timeout}{\code{numeric(1)} The maximum time in seconds to spend trying
-    to build a model at a given CpG site (if it takes longer, we skip the
-    site).}
+    \item{timeout}{(optional) \code{numeric(1)} The maximum time in seconds to
+    spend trying to build a model at a given CpG site (if it takes longer, we
+    skip the site).}
 
-    \item{laplaceSmooth}{\code{logical(1)} Whether or not to do Laplace (i.e.,
-    add one) smoothing on the counts.}
+    \item{laplaceSmooth}{(optional) \code{logical(1)} Whether or not to do
+    Laplace (i.e., add one) smoothing on the counts.}
 
-    \item{chrs}{A character vector listing the chromosomes to be loaded.}
+    \item{chrs}{(optional) A character vector listing the chromosomes to be
+    loaded.}
 
-    \item{outprefix}{\code{character(1)} The sample output file prefix (can
-    include a full file path if current working directory is not desired output
-    location).}
-
-    \item{modelOutPrefix}{\code{character(1)} The cohort modeling output file
+    \item{outprefix}{(optional) \code{character(1)} The sample output file
     prefix (can include a full file path if current working directory is not
     desired output location).}
+
+    \item{modelOutPrefix}{(optional) \code{character(1)} The cohort modeling
+    output file prefix (can include a full file path if current working
+    directory is not desired output location).}
 }
 \description{
-Run the full borealis pipeline.
+Run the full borealis pipeline. It will load in bismark data and save out to
+disk matrix-based methylation and total count files, then it will build the
+beta-binomial statistical models for the cohort at each CpG site and save the
+parameters of this model to disk, and finally provide outlier p-values and
+summary statistics for each sample in the cohort at each CpG site.
 }
 \examples{
 extdata <- system.file("extdata","bismark", package="borealis")
@@ -58,7 +64,6 @@ file.remove(c('CpG_model_chr1.csv', 'CpG_model_rawMethCount.tsv',
     'borealis_pat8_chr1_DMLs.tsv'))
 }
 \value{
-Returns a list with raw data and modeling results. The list has elements
-\code{BSobj} and \code{result}, which have the dataset and modeling results,
-respectively.
+Returns an object of "SeqCountSet" class with raw dataset loaded and used for
+modeling purposes.
 }

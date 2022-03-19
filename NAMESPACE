@@ -1,6 +1,7 @@
 import( doMC )
 import( purrr )
 import( plyr )
+import( dplyr )
 import( foreach )
 import( gamlss )
 import( gamlss.dist )
@@ -9,10 +10,14 @@ import( bsseq )
 import(methods)
 import( DSS )
 import( R.utils )
+import( ggplot2 )
+import( cowplot )
 importFrom("stats", "na.omit")
 importFrom("utils", "read.csv", "read.table", "write.csv", "write.table")
+importFrom("stats", "binom.test", "dbeta")
+importFrom("rlang",".data")
 export(
-        loadBismarkData,
         runBorealis,
-        runSingleNewSample
+        runSingleNewSample,
+        plotCpGsite
 )

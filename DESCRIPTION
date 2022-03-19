@@ -9,7 +9,7 @@ Authors@R: person(given = "Garrett",
             comment = c(ORCID = "0000-0003-2548-098X"))
 Depends: R (>= 4.1.0), Biobase
 Imports:  doMC, purrr, plyr, foreach, gamlss, gamlss.dist, bsseq, 
-    methods, DSS, R.utils, utils, stats
+    methods, DSS, R.utils, utils, stats, ggplot2, cowplot, dplyr, rlang
 Description: Borealis is an R library performing outlier analysis for
     count-based bisulfite sequencing data. It detectes outlier
     methylated CpG sites from bisulfite sequencing

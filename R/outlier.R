@@ -13,12 +13,12 @@ runBorealis <- function(inDir,
 
     # read in raw data and store matrix versions to disk
     BSobj <- loadBismarkData(inDir,suffix,chrs)
-    write.table(cbind(as.vector(BSobj$chr,mode="character"),
-                        BSobj$pos,BSobj$pos,BSobj$x),
+    write.table(cbind(chr=as.vector(BSobj$chr,mode="character"),
+                        start=BSobj$pos,end=BSobj$pos+1,BSobj$x),
                     file=paste0(modelOutPrefix,"_rawMethCount.tsv"),
                     row.names=FALSE,quote=FALSE,sep="\t")
-    write.table(cbind(as.vector(BSobj$chr,mode="character"),
-                        BSobj$pos,BSobj$pos,BSobj$n),
+    write.table(cbind(chr=as.vector(BSobj$chr,mode="character"),
+                        start=BSobj$pos,end=BSobj$pos+1,BSobj$n),
                     file=paste0(modelOutPrefix,"_rawTotalCount.tsv"),
                     row.names=FALSE,quote=FALSE,sep="\t")
 
@@ -33,8 +33,8 @@ runBorealis <- function(inDir,
     # compute the final results and save them to disk
     result <- writeResults(BSobj,modelDF,outprefix,chrs)
 
-    # return data and results for interactive use
-    return(list(BSobj=BSobj,result=result))
+    # return data for interactive use
+    return(BSobj)
 }
 
 # Function to load data from bismark outputs
@@ -222,3 +222,77 @@ runSingleNewSample <- function(inFile,outFile,minObsDepth=10,
     }
     return(df)
 }
+
+plotCpGsite <- function(cpgSites, sampleOfInterest=NA,
+                        modelFile="CpG_model.csv",
+                        methCountFile="CpG_model_rawMethCount.tsv",
+                        totalCountFile="CpG_model_rawTotalCount.tsv"){
+    # read in data
+    modelDF <- read.csv(modelFile)
+    methDF  <- read.table(methCountFile, header=TRUE)
+    methDF$chr <- as.character(methDF$chr)
+    totDF   <- read.table(totalCountFile, header=TRUE)
+    totDF$chr <- as.character(methDF$chr)
+    samps <- names(methDF)[c(-1,-2,-3)]
+
+    # make a plot per cpg
+    plots <- list()
+    for(cpg in cpgSites){
+        # filter down to this locus
+        chr <- strsplit(cpg,":")[[1]][1]
+        start <- as.numeric(strsplit(cpg,":")[[1]][2])
+        x <- methDF %>% dplyr::filter(chr==chr,start==start) %>%
+                dplyr::select(-c(1,2,3))
+        n <- totDF %>%  dplyr::filter(chr==chr,start==start) %>%
+                dplyr::select(-c(1,2,3))
+        model <- modelDF %>% dplyr::filter(chr==chr,start==start) %>%
+                dplyr::select(-c(1,2)) %>%
+                dplyr::mutate(alpha=.data$mu/.data$theta,
+                                beta=(1-.data$mu)/.data$theta)
+
+        # make binom confidence intervals for each samp's raw data
+        df <- data.frame(samples=samps,lowerBnd=NA,est=NA,upperBnd=NA,
+                            sampleOfInterest= (samps %in% sampleOfInterest))
+        for(ind in seq_along(samps)){
+            res <- binom.test(x[ind],n[ind])
+            df[ind,"lowerBnd"] <- res$conf.int[1]
+            df[ind,"upperBnd"] <- res$conf.int[2]
+            df[ind,"est"] <- res$estimate
+        }
+        # make plot and store in list to be returned
+        plots[cpg] <- generatePlot(df,model,sampleOfInterest)
+    }
+    return(plots)
+}
+
+generatePlot <- function(df,model,sampleOfInterest){
+    # Make plot of raw data confidence intervals and point estimates
+    if(!is.na(sampleOfInterest)){
+        p1 <- ggplot2::ggplot(df,aes(y=.data$samples,
+                                        color=.data$sampleOfInterest)) +
+            ggplot2::geom_errorbar(aes(xmin=.data$lowerBnd,
+                                        xmax=.data$upperBnd)) +
+            ggplot2::geom_point(aes(x=.data$est),size=2) +
+            ggplot2::xlim(c(0,1)) +
+            ggplot2::xlab("Percent Methylation")
+    } else{
+        p1 <- ggplot2::ggplot(df,aes(y=.data$samples)) +
+            ggplot2::geom_errorbar(aes(xmin=.data$lowerBnd,
+                                        xmax=.data$upperBnd))+
+            ggplot2::geom_point(aes(x=.data$est),size=2) +
+            ggplot2::xlim(c(0,1))+
+            ggplot2::xlab("Percent Methylation")
+    }
+
+    # Make plot of the estimated population beta distribution
+    betaDF <- data.frame(x=seq(0,1,length=100), y=dbeta(seq(0,1,length=100),
+                                                        model$alpha,model$beta))
+    p2 <- ggplot2::ggplot(betaDF,aes(x=.data$x,y=.data$y)) +
+            ggplot2::geom_line(color="blue") +
+            ggplot2::expand_limits(y=0) +
+            ggplot2::xlab("") + ggplot2::ylab("Model")
+
+    # return a stacked plot
+    return(plot_grid(p2,p1,ncol=1,rel_heights = c(1,2)))
+}
+
