@@ -278,7 +278,7 @@ generatePlot <- function(df,model,sampleOfInterest){
             ggplot2::geom_point(aes(x=.data$est),size=2) +
             ggplot2::xlim(c(0,1)) +
             ggplot2::xlab("Percent Methylation")+
-            theme(legend.position="none")
+            ggplot2::theme(legend.position="none")
     } else{
         p1 <- ggplot2::ggplot(df,aes(y=.data$samples)) +
             ggplot2::geom_errorbar(aes(xmin=.data$lowerBnd,
