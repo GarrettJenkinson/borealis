@@ -289,7 +289,7 @@ generatePlot <- function(df,model,sampleOfInterest){
     }
 
     # Make plot of the estimated population beta distribution
-    betaDF <- data.frame(x=seq(0,1,length=100), y=dbeta(seq(0,1,length=100),
+    betaDF <- data.frame(x=seq(0,1,length=1000), y=dbeta(seq(0,1,length=1000),
                                                         model$alpha,model$beta))
     p2 <- ggplot2::ggplot(betaDF,aes(x=.data$x,y=.data$y)) +
             ggplot2::geom_line(color="blue") +
