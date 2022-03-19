@@ -263,7 +263,7 @@ plotCpGsite <- function(cpgSites, sampleOfInterest=NA,
             df[ind,"est"] <- res$estimate
         }
         # make plot and store in list to be returned
-        plots[cpg] <- generatePlot(df,model,sampleOfInterest)
+        plots[[cpg]] <- generatePlot(df,model,sampleOfInterest)
     }
     return(plots)
 }
@@ -277,7 +277,8 @@ generatePlot <- function(df,model,sampleOfInterest){
                                         xmax=.data$upperBnd)) +
             ggplot2::geom_point(aes(x=.data$est),size=2) +
             ggplot2::xlim(c(0,1)) +
-            ggplot2::xlab("Percent Methylation")
+            ggplot2::xlab("Percent Methylation")+
+            theme(legend.position="none")
     } else{
         p1 <- ggplot2::ggplot(df,aes(y=.data$samples)) +
             ggplot2::geom_errorbar(aes(xmin=.data$lowerBnd,
