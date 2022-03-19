@@ -239,22 +239,25 @@ plotCpGsite <- function(cpgSites, sampleOfInterest=NA,
     plots <- list()
     for(cpg in cpgSites){
         # filter down to this locus
-        chr <- strsplit(cpg,":")[[1]][1]
-        start <- as.numeric(strsplit(cpg,":")[[1]][2])
-        x <- methDF %>% dplyr::filter(chr==chr,start==start) %>%
+        my_chr <- strsplit(cpg,":")[[1]][1]
+        my_start <- as.numeric(strsplit(cpg,":")[[1]][2])
+        x <- methDF %>% dplyr::filter(.data$chr==my_chr,
+                                        .data$start==my_start) %>%
                 dplyr::select(-c(1,2,3))
-        n <- totDF %>%  dplyr::filter(chr==chr,start==start) %>%
+        n <- totDF %>%  dplyr::filter(.data$chr==my_chr,
+                                        .data$start==my_start) %>%
                 dplyr::select(-c(1,2,3))
-        model <- modelDF %>% dplyr::filter(chr==chr,start==start) %>%
+        model <- modelDF %>% dplyr::filter(.data$chr==my_chr,
+                                            .data$pos==my_start) %>%
                 dplyr::select(-c(1,2)) %>%
                 dplyr::mutate(alpha=.data$mu/.data$theta,
                                 beta=(1-.data$mu)/.data$theta)
 
         # make binom confidence intervals for each samp's raw data
         df <- data.frame(samples=samps,lowerBnd=NA,est=NA,upperBnd=NA,
-                            sampleOfInterest= (samps %in% sampleOfInterest))
+                            sampleOfInterest=(samps %in% sampleOfInterest))
         for(ind in seq_along(samps)){
-            res <- binom.test(x[ind],n[ind])
+            res <- binom.test(as.numeric(x[ind][[1]]),as.numeric(n[ind][[1]]))
             df[ind,"lowerBnd"] <- res$conf.int[1]
             df[ind,"upperBnd"] <- res$conf.int[2]
             df[ind,"est"] <- res$estimate
