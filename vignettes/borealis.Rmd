@@ -74,9 +74,9 @@ extdata <- system.file("extdata","bismark", package="borealis")
 
 
 # Run borealis
-results <- runBorealis(extdata,nThreads=1, chrs="chr14", outprefix=paste(extdata,"/borealis_", sep=""), modelOutPrefix = paste(extdata,"/CpG_model", sep=""))
+results <- runBorealis(extdata,nThreads=1, chrs="chr14", outprefix=paste(extdata,"/borealis_", sep=""), modelOutPrefix =paste(extdata,"/CpG_model", sep=""))
 
-
+quit()
 
 # Read in the name of all files for analysis
 borealis_in<-dir(extdata,pattern="*DMLs.tsv")
