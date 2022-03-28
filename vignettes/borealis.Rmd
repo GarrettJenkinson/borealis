@@ -78,7 +78,7 @@ results <- runBorealis(extdata,nThreads=1, chrs="chr14",
         outprefix=file.path(extdata,"/borealis_"), 
         modelOutPrefix=file.path(extdata,"/CpG_model"))
 
-quit()
+
 
 # Read in the name of all files for analysis
 borealis_in<-dir(extdata,pattern="*DMLs.tsv")
@@ -404,8 +404,8 @@ most interesting is the LTB4R promoter.
 Let's use a handy Borealis plotting function to investigate this site further.
 
 
-fig_cap="Single-site data summary provided by Borealis plotCpGsite function."
-```{r sitegraph, fig.wide=TRUE, fig.cap=fig_cap, echo=FALSE}
+
+```{r sg, fig.wide=TRUE, fig.cap="plotCpGsite function", echo=FALSE}
 # Use Borealis plotting function to investigate this site further
 plotCpGsite("chr14:24780288",
 sampleOfInterest="patient_72",
