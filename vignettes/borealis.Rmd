@@ -74,7 +74,9 @@ extdata <- system.file("extdata","bismark", package="borealis")
 
 
 # Run borealis
-results <- runBorealis(extdata,nThreads=1, chrs="chr14", outprefix=paste(extdata,"/borealis_", sep=""), modelOutPrefix =paste(extdata,"/CpG_model", sep=""))
+results <- runBorealis(extdata,nThreads=1, chrs="chr14", 
+        outprefix=file.path(extdata,"/borealis_"), 
+        modelOutPrefix=file.path(extdata,"/CpG_model"))
 
 quit()
 
@@ -108,7 +110,8 @@ library(dplyr)
 for (file in borealis_in) {
     name=file
     name=sub("_DMLs.tsv", "", name)
-    assign(name, read.table(paste(extdata,file, sep="/"), header=TRUE, stringsAsFactors=FALSE))
+    assign(name, read.table(file.path(extdata,file), header=TRUE,
+        stringsAsFactors=FALSE))
 }
 
 
@@ -149,7 +152,7 @@ for (i in 1:length(list_DataFrame)) {
     sample=sub("_chr.*", "", list_object_names[i])
     list_DataFrame[[i]]$sampleID=sample
     list_DataFrame[[i]]$pAdj=p.adjust( list_DataFrame[[i]]$pVal, method="BH")
-    filepath <- paste(extdata,"/",list_object_names[i],'.padj',sep="")
+    filepath <- file.path(extdata,paste(list_object_names[i],'.padj',sep=""))
     colnames(list_DataFrame[[i]])[1]<-"#chr"
     write.table(list_DataFrame[[i]], file=filepath, quote=FALSE,sep='\t',
     row.names=FALSE)
@@ -186,7 +189,8 @@ Lets create a table to summarize useful metrics about the CpG sites
 
 ```{r}
 # Create table of unique positions and mu/theta values
-mu_theta<-unique(subset(combined_files, select=-c(x,n,pVal, isHypo, pAdj, effSize, sampleID)))
+mu_theta<-unique(subset(combined_files, select=-c(x,n,pVal, isHypo, pAdj, 
+        effSize, sampleID)))
 ```
 
 ### How many unique samples and unique CpG sites are we analyzing data from?
@@ -212,7 +216,8 @@ Now let's look at the distribitions of other important values.
 
 
 ```{r}
-# Create table of unique positions and depth/p-val/padj for each position in each case
+# Create table of unique positions and depth/p-val/padj for each position in 
+# each case
 depth_pvals_eff<-unique(combined_files)
 ```
 
@@ -258,7 +263,8 @@ signif_only<-subset(combined_files, pVal<=0.05)
 signif_counts<-signif_only %>% count(sampleID)
 
 # Calculate the percentiles of the number of significant sites
-sig_quantiles<-quantile(signif_counts$n, probs=c(0.025, 0.05, 0.95, 0.975, 0.999))
+sig_quantiles<-quantile(signif_counts$n,
+        probs=c(0.025, 0.05, 0.95, 0.975, 0.999))
 
 # Check if nay patients are above the 99.9th percentile
 subset(signif_counts, n>=sig_quantiles["99.9%"])
@@ -326,7 +332,7 @@ annot_func<-function(file){
 
     # Give each region a unique ID
     dmrs.gr$dmrId <- seq(1,length(dmrs.gr))
-    # Select annnotation classes we want from annotatr (these can be user-customized
+    # Select annnotation classes we want from annotatr (can be user-customized)
     annots <- c('_genes_promoters','_genes_1to5kb','_genes_cds','_genes_5UTRs',
     '_genes_exons','_genes_firstexons','_genes_introns',
     '_genes_intronexonboundaries','_genes_exonintronboundaries',
@@ -336,13 +342,10 @@ annot_func<-function(file){
 
     # Annotate
     annots <- paste(genome.version,annots,sep="")
-
     annots.all.gr = build_annotations(genome = genome.version,
     annotations = annots)
-
     dmrs.annotatr.gr=annotate_regions(regions=dmrs.gr,
     annotations=annots.all.gr, ignore.strand=TRUE, minoverlap=0)
-
     dmrs.annotatr.df<-data.frame(dmrs.annotatr.gr)
 
     # Sort annotated CpG sites by the number of features they get annotated with
@@ -353,7 +356,6 @@ annot_func<-function(file){
     dmrs.annotatr.df<- dmrs.annotatr.df[order(dmrs.annotatr.df$rkg),]
     dmrs.annotatr.df<-merge(dmrs.annotatr.df, freq.table, by.x="dmrId",
     by.y="dmrId")
-
     dmrs.annotatr.df <- dmrs.annotatr.df[order(dmrs.annotatr.df$rkg),]
 
     #Create dataframe for output to file and ordwer rows
@@ -362,7 +364,8 @@ annot_func<-function(file){
 
     # Write out to new files (ending *.annot)
     filepath <- paste(basename,'.annot',sep="")
-    write.table(finalout.df, file=filepath, quote=FALSE,sep='\t',row.names=FALSE)
+    write.table(finalout.df, file=filepath, quote=FALSE,sep='\t',
+        row.names=FALSE)
 }
 ```
 
@@ -376,7 +379,8 @@ overhead.
 library(future.apply)
 # Run annotation function
 plan(multisession)
-future_lapply(paste(extdata,"/",c(padjusted_in),sep=""), function(i) {annot_func(i)}, future.seed=TRUE)
+future_lapply(file.path(extdata,c(padjusted_in)), 
+        function(i) {annot_func(i)}, future.seed=TRUE)
 ```
 
 With the annotation complete, we can read in the new files for inspection.
@@ -384,7 +388,7 @@ With the annotation complete, we can read in the new files for inspection.
 ```{r}
 # Read in annotated files to summarize CpG data across features
 annots<-dir(extdata,pattern="*.annot$")
-all_annot<-bind_rows(lapply(paste(extdata,"/",annots, sep=""), fread))
+all_annot<-bind_rows(lapply(file.path(extdata,annots), fread))
 ```
 
 Now let's look at that most significant site again - with annotations.
@@ -400,13 +404,14 @@ most interesting is the LTB4R promoter.
 Let's use a handy Borealis plotting function to investigate this site further.
 
 
-```{r sitegraph, fig.wide=TRUE, fig.cap="Single-site data summary provided by the plotCpGsite fucntion included with borealis", echo=FALSE}
+fig_cap="Single-site data summary provided by Borealis plotCpGsite function."
+```{r sitegraph, fig.wide=TRUE, fig.cap=fig_cap, echo=FALSE}
 # Use Borealis plotting function to investigate this site further
 plotCpGsite("chr14:24780288",
 sampleOfInterest="patient_72",
-modelFile=paste(extdata,"/","/CpG_model_chr14.csv",sep=""),
-methCountFile=paste(extdata,"/","/CpG_model_rawMethCount.tsv",sep=""),
-totalCountFile=paste(extdata,"/","CpG_model_rawTotalCount.tsv",sep=""))
+modelFile=file.path(extdata,"/CpG_model_chr14.csv"),
+methCountFile=file.path(extdata,"/CpG_model_rawMethCount.tsv"),
+totalCountFile=file.path(extdata,"CpG_model_rawTotalCount.tsv"))
 ```
 The graph above shows us the expected methylation profile under our model, and
 how far our site deviates from the expected methylation profile.  As you can
@@ -477,8 +482,8 @@ collapse_func<-function(file) {
     featurecnts<-merge(locations, featurecnts, by.x="annot.id", by.y="annot.id")
     genemap<-cbind(input$annot.symbol, input$annot.id, input$annot.tx_id,
     input$annot.width, input$sampleID)
-    colnames(genemap)<-c("annot.symbol", "annot.id", "annot.tx_id", "annot.width",
-    "SampleID")
+    colnames(genemap)<-c("annot.symbol", "annot.id", "annot.tx_id", 
+        "annot.width","SampleID")
     genemap<-unique(genemap)
     pvals<-as.data.frame(cbind(input$annot.id, input$pAdj, input$isHypo,
     input$effSize))
@@ -495,14 +500,17 @@ collapse_func<-function(file) {
         df<-length(ss$pAdj)*2
         dfhypo<-length(sshypo$pAdj)*2
         dfnohypo<-length(ssnohypo$pAdj)*2
-        pout<-pchisq(-2*sum(log(c(ss$pAdj))),df,lower.tail = F)
-        pouthypo<-pchisq(-2*sum(log(c(sshypo$pAdj))),dfhypo,lower.tail = F)
-        poutnohypo<-pchisq(-2*sum(log(c(ssnohypo$pAdj))),dfnohypo,lower.tail = F)
+        pout<-pchisq(-2*sum(log(c(ss$pAdj))),df,lower.tail=FALSE)
+        pouthypo<-pchisq(-2*sum(log(c(sshypo$pAdj))),dfhypo,lower.tail=FALSE)
+        poutnohypo<-pchisq(-2*sum(log(c(ssnohypo$pAdj))),
+                dfnohypo,lower.tail=FALSE)
         medeshypo<-median(c(sshypo$effSize))
         medesnohypo<-median(c(ssnohypo$effSize))
-        ishypo<-length(ss$isHypo[which(ss$isHypo=="TRUE" & ss$pAdj<=padj_thresh)])
+        ishypo<-length(ss$isHypo[which(ss$isHypo=="TRUE" & 
+                ss$pAdj<=padj_thresh)])
         ishypo_all<-length(ss$isHypo[which(ss$isHypo=="TRUE")])
-        ishyper<-length(ss$isHypo[which(ss$isHypo=="FALSE" & ss$pAdj<=padj_thresh)])
+        ishyper<-length(ss$isHypo[which(ss$isHypo=="FALSE" &
+                ss$pAdj<=padj_thresh)])
         ishyper_all<-length(ss$isHypo[which(ss$isHypo=="FALSE")])
         is_na<-length(ss$isHypo[which(is.na(ss$isHypo))])
         best_pval<-min(ss$pAdj)
@@ -570,7 +578,8 @@ collapse_func<-function(file) {
 Okay - now let's run that function and do the summarization:
 
 ```{r, warning=FALSE, message=FALSE, results='hide'}
-future_lapply(paste(extdata,"/",c(annots),sep=""), function(i) {collapse_func(i)})
+future_lapply(file.path(extdata,c(annots)),
+        function(i) {collapse_func(i)})
 ```
 
 Now let's read in those newly summarized results and have a look:
@@ -578,7 +587,7 @@ Now let's read in those newly summarized results and have a look:
 ```{r}
 # Read in merged files to investigate on a per-feature level
 collapsed<-dir(extdata,pattern="*.collapse.txt$")
-collapsed<-paste(extdata,"/",c(collapsed),sep="")
+collapsed<-file.path(extdata,c(collapsed))
 all_collapsed<-bind_rows(lapply(collapsed, fread))
 
 # Select the feature with the lowest individual p-value
