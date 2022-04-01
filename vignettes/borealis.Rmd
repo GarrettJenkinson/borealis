@@ -428,7 +428,7 @@ significance in our feature-summarized data. In our summarization we will make
 use of corrected p-values and ignore uncorrected p-values. Your analysis can
 optionally use an alternative approach.
 
-Now we will create a function to do the summarization. You can use this as-is or
+Now we will create functions to do the summarization. You can use this as-is or
 can easily customize it to create summary metrics specific to your application.
 
 ```{r}
