@@ -1,7 +1,7 @@
 Package: borealis
 Type: Package
 Title: Bisulfite-seq OutlieR mEthylation At singLe-sIte reSolution
-Version: 0.1.0
+Version: 0.99.0
 Authors@R: person(given = "Garrett",
             family = "Jenkinson",
             role = c("aut", "cre"),
