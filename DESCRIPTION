@@ -17,8 +17,7 @@ Description: Borealis is an R library performing outlier analysis for
     can be useful for rare disease diagnoses. 
 License: GPL-3
 Encoding: UTF-8
-Suggests: BiocStyle, knitr, rmarkdown, RUnit, BiocGenerics, future, 
-    future.apply, annotatr, data.table, tidyr, 
+Suggests: BiocStyle, knitr, rmarkdown, RUnit, BiocGenerics, annotatr, tidyr, 
     TxDb.Hsapiens.UCSC.hg19.knownGene, org.Hs.eg.db
 VignetteBuilder: knitr
 biocViews: Sequencing, Coverage, DNAMethylation, DifferentialMethylation

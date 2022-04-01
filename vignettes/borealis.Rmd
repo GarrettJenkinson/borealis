@@ -113,8 +113,6 @@ First we'll read in the data for each of the 20 patients and create dataframes
 for each:
 
 ```{r, message=FALSE, warning=FALSE}
-suppressMessages(require(dplyr)) # GARRETT: remove this?
-
 # Read in list of Borealis output files and create a dataframe for each
 for (file in borealis_in) {
     name <- file
@@ -162,7 +160,7 @@ for (i in seq_along(list_DataFrame)) {
     filepath <- file.path(extdata,paste(list_object_names[i],'.padj',sep=""))
     colnames(list_DataFrame[[i]])[1] <- "#chr"
     write.table(list_DataFrame[[i]], file=filepath, quote=FALSE,sep='\t',
-    row.names=FALSE) ## GARRETT: REMOVE?
+    row.names=FALSE) 
 }
 ```
 
@@ -268,7 +266,8 @@ called significant (p \<= 0.05):
 # Detection of outliers based on number of significant sites
 # Count significant CpG sites per patient
 signif_only <- subset(combined_files, pVal <= 0.05)
-signif_counts <- signif_only %>% count(sampleID)
+#signif_counts <- signif_only %>% dplyr::count(sampleID)
+signif_counts <- dplyr::count(signif_only,sampleID)
 
 # Calculate the percentiles of the number of significant sites
 sig_quantiles <- quantile(signif_counts$n,
@@ -332,26 +331,14 @@ Now we provide a function that will annotate each file with annotations from
 
 ```{r}
 # Function to annotate Borealis output with the annotatr package
-annotFunc <- function(file){
-    basename <- file
-    # Define data-type of non-traditional BED file columns from BOREALIS output
-    extracols <- c(x="numeric", n="numeric", mu="numeric", theta="numeric",
-    pVal="numeric", isHypo="character", effSize="numeric",
-    sampleID="character", pAdj="numeric")
-
+annotFunc <- function(file,extracols,annots){
+    
     #Read in file to annotatr
     dmrs.gr <- annotatr::read_regions(con=file, genome=genome.version,
     extraCols=extracols, format='bed')
 
     # Give each region a unique ID
     dmrs.gr$dmrId <- seq(1,length(dmrs.gr))
-    # Select annnotation classes we want from annotatr (can be user-customized)
-    annots <- c('_genes_promoters','_genes_1to5kb','_genes_cds','_genes_5UTRs',
-    '_genes_exons','_genes_firstexons','_genes_introns',
-    '_genes_intronexonboundaries','_genes_exonintronboundaries',
-    '_genes_3UTRs','_genes_intergenic','_cpg_islands',
-    '_cpg_shores','_cpg_shelves','_cpg_inter','_enhancers_fantom',
-    '_basicgenes','_cpgs')
 
     # Annotate
     annots <- paste(genome.version,annots,sep="")
@@ -375,10 +362,7 @@ annotFunc <- function(file){
     finalout.df <- dmrs.annotatr.df
     finalout.df <- finalout.df[order(finalout.df$rkg),]
 
-    # Write out to new files (ending *.annot)
-    filepath <- paste(basename,'.annot',sep="")
-    write.table(finalout.df, file=filepath, quote=FALSE,sep='\t',
-        row.names=FALSE)
+    return(finalout.df)
 }
 ```
 
@@ -387,22 +371,20 @@ take a little while even with small files since database loading creates
 overhead.
 
 ```{r, message=FALSE, results='hide', warning=FALSE}
-# Now process each file individually and in parallel
-# Run annotation function
-#future::plan("multisession")
-#future.apply::future_lapply(file.path(extdata,c(padjustedIn)), 
-#        function(i) {annotFunc(i)}, future.seed=TRUE)
-annotFunc(file.path(extdata,padjustedIn))
-```
+# Define data-type of non-traditional BED file columns from BOREALIS output
+extracols <- c(x="numeric", n="numeric", mu="numeric", theta="numeric",
+                pVal="numeric", isHypo="character", effSize="numeric",
+                sampleID="character", pAdj="numeric")
 
-With the annotation complete, we can read in the new files for inspection.
+# Select annnotation classes we want from annotatr (can be user-customized)
+myAnnots <- c('_genes_promoters','_genes_1to5kb','_genes_cds','_genes_5UTRs',
+            '_genes_exons','_genes_firstexons','_genes_introns',
+            '_genes_intronexonboundaries','_genes_exonintronboundaries',
+            '_genes_3UTRs','_genes_intergenic','_cpg_islands',
+            '_cpg_shores','_cpg_shelves','_cpg_inter','_enhancers_fantom',
+            '_basicgenes','_cpgs')
 
-```{r}
-# Read in annotated file to summarize CpG data across features
-annots <- dir(extdata,pattern="*.annot$")
-allAnnot <- data.table::fread(file.path(extdata,annots)) # GARRETT: remove DT?
-#allAnnot <- dplyr::bind_rows(lapply(file.path(extdata,annots), 
-#                                    data.table::fread))
+allAnnot <- annotFunc(file.path(extdata,padjustedIn),extracols,myAnnots)
 ```
 
 Now let's look at that most significant site again - with annotations.
@@ -420,10 +402,12 @@ Let's use a handy Borealis plotting function to investigate this site further.
 ```{r sg, fig.wide=TRUE, fig.cap="plotCpGsite function", echo=FALSE}
 # Use Borealis plotting function to investigate this site further
 plotCpGsite("chr14:24780288",
-sampleOfInterest="patient_72",
-modelFile=file.path(extdata,"vignette_CpG_model_chr14.csv"),
-methCountFile=file.path(extdata,"vignette_CpG_model_rawMethCount_chr14.tsv"),
-totalCountFile=file.path(extdata,"vignette_CpG_model_rawTotalCount_chr14.tsv"))
+    sampleOfInterest="patient_72",
+    modelFile=file.path(extdata,"vignette_CpG_model_chr14.csv"),
+    methCountFile=file.path(extdata,
+                            "vignette_CpG_model_rawMethCount_chr14.tsv"),
+    totalCountFile=file.path(extdata,
+                            "vignette_CpG_model_rawTotalCount_chr14.tsv"))
 ```
 
 The graph above shows us the expected methylation profile under our model, and
@@ -444,19 +428,12 @@ significance in our feature-summarized data. In our summarization we will make
 use of corrected p-values and ignore uncorrected p-values. Your analysis can
 optionally use an alternative approach.
 
-```{r}
-# corrected p-value threshold to call sites significant
-padjThresh <- 0.05
-
-```
-
 Now we will create a function to do the summarization. You can use this as-is or
 can easily customize it to create summary metrics specific to your application.
 
 ```{r}
-
 # Function to calculate per feature metrics in parallel
-perFeatFunc <- function(annot_id,pvals){
+perFeatFunc <- function(annot_id,pvals,padjThresh=0.05){
     ss <- subset(pvals, annot.id == annot_id)
     sshypo <- subset(ss, isHypo == "TRUE")
     ssnohypo <- subset(ss, isHypo == "FALSE")
@@ -488,10 +465,8 @@ perFeatFunc <- function(annot_id,pvals){
 
     return(combout)
 }
-collapseFunc <- function(file) {
-# Process each file, summarize data across features and output new files
-    input <- read.table(file, header=TRUE, stringsAsFactors=FALSE)
 
+collapseFunc <- function(input,padjThresh=0.05) {
     # Calculate how may CpGs per annotatr feature and store in dataframe
     featureids <- input$annot.id
     featurecnts <- as.data.frame(table(featureids))
@@ -508,9 +483,7 @@ collapseFunc <- function(file) {
         by.y="annot.id", all.x=TRUE)
     } else {featurecnts$signifCount <- 0}
 
-
     # Calculate a range of summary metrics per feature
-
     # What fraction of sites per feature pass p-value threshold?
     featurecnts$fractionSignif <- featurecnts$signifCount/featurecnts$NoSites
 
@@ -535,11 +508,12 @@ collapseFunc <- function(file) {
     pvals$pAdj <- (as.numeric(as.character(pvals$pAdj)))
     pvals$effSize <- (as.numeric(as.character(pvals$effSize)))
 
-    # Execute summarization
-    future::plan(future::multisession)
-    newPvals <- future.apply::future_lapply(seq_along(featurecnts$annot.id), 
-                                                function(i) {
-    perFeatFunc(featurecnts$annot.id[i],pvals)})
+    return(featureCountsEnhancement(featurecnts,genemap,pvals))
+}
+
+featureCountsEnhancement <- function(featurecnts,genemap,pvals){
+    newPvals <- lapply(seq_along(featurecnts$annot.id), 
+                    function(i) {perFeatFunc(featurecnts$annot.id[i],pvals)})
 
     # Break apart data output by parallel annotation
     newPvals <- as.vector(newPvals)
@@ -582,28 +556,20 @@ collapseFunc <- function(file) {
     summarized <- merge(featurecnts, genemap, by.x="annot.id", by.y="annot.id")
     summarized$signifCount[is.na(summarized$signifCount)] <- 0
     summarized$fractionSignif[is.na(summarized$fractionSignif)] <- 0
-    output1 <- paste(file, "_", padjThresh, "_feature_collapse.txt", sep="")
-    write.table(summarized, file=output1, quote=FALSE,sep='\t',row.names=FALSE)
+    return(summarized)
 }
+
 ```
 
 Okay - now let's run that function and do the summarization:
 
 ```{r, warning=FALSE, message=FALSE, results='hide'}
-#future.apply::future_lapply(file.path(extdata,c(annots)),
-#        function(i) {collapseFunc(i)})
-collapseFunc(file.path(extdata,annots))
+allCollapsed <- collapseFunc(allAnnot)
 ```
 
-Now let's read in those newly summarized results and have a look:
+Now let's have a look:
 
 ```{r}
-# Read in merged files to investigate on a per-feature level
-collapsed <- dir(extdata,pattern="*.collapse.txt$")
-collapsed <- file.path(extdata,collapsed)
-#allCollapsed <- dplyr::bind_rows(lapply(collapsed, data.table::fread))
-allCollapsed <- data.table::fread(collapsed) #GARRETT: remove DT?
-
 # Select the feature with the lowest individual p-value
 subset(allCollapsed, Best_ss_pAdj == min(allAnnot$pAdj))
 ```
