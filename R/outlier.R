@@ -15,11 +15,13 @@ runBorealis <- function(inDir,
     BSobj <- loadBismarkData(inDir,suffix,chrs)
     write.table(cbind(chr=as.vector(BSobj$chr,mode="character"),
                         start=BSobj$pos,end=BSobj$pos+1,BSobj$x),
-                    file=paste0(modelOutPrefix,"_rawMethCount.tsv"),
+                    file=paste0(modelOutPrefix,"_rawMethCount_",
+                                paste(chrs,collapse="_"),".tsv"),
                     row.names=FALSE,quote=FALSE,sep="\t")
     write.table(cbind(chr=as.vector(BSobj$chr,mode="character"),
                         start=BSobj$pos,end=BSobj$pos+1,BSobj$n),
-                    file=paste0(modelOutPrefix,"_rawTotalCount.tsv"),
+                    file=paste0(modelOutPrefix,"_rawTotalCount_",
+                                paste(chrs,collapse="_"),".tsv"),
                     row.names=FALSE,quote=FALSE,sep="\t")
 
     # build the models and save the parameters to disk
