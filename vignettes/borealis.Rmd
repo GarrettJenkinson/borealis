@@ -16,7 +16,6 @@ vignette: |
     %\VignetteEngine{knitr::rmarkdown}
     %\VignetteEncoding{UTF-8}
 ---
-
 # Introduction
 Borealis is a package for the detection of outlier methylation at 
 single CpG-site resolution, where a cohort of 3 to 100+ samples can be processed 
@@ -67,21 +66,22 @@ region from chromosome 14 (hg19) for 20 of the 94 individuals described in the
 Borealis publication.
 
 ```{r, message=FALSE, warning=FALSE}
-library("borealis")
+require("borealis")
 
 # Set data location 
 extdata <- system.file("extdata","bismark", package="borealis")
 
 
 # Run borealis
-results <- runBorealis(extdata,nThreads=1, chrs="chr14", 
+results <- runBorealis(extdata,nThreads=2, chrs="chr14",
+        suffix=".gz",
         outprefix=file.path(extdata,"/borealis_"), 
         modelOutPrefix=file.path(extdata,"/CpG_model"))
 
 
 
 # Read in the name of all files for analysis
-borealis_in<-dir(extdata,pattern="*DMLs.tsv")
+borealis_in <- dir(extdata,pattern="*DMLs.tsv")
 
 ```
 
@@ -103,8 +103,7 @@ First we'll read in the data for each of the 20 patients and create dataframes
 for each:
 
 ```{r, message=FALSE, warning=FALSE}
-library(data.table)
-library(dplyr)
+require(dplyr)
 
 # Read in list of Borealis output files and create a dataframe for each
 for (file in borealis_in) {
@@ -153,7 +152,7 @@ for (i in 1:length(list_DataFrame)) {
     list_DataFrame[[i]]$sampleID=sample
     list_DataFrame[[i]]$pAdj=p.adjust( list_DataFrame[[i]]$pVal, method="BH")
     filepath <- file.path(extdata,paste(list_object_names[i],'.padj',sep=""))
-    colnames(list_DataFrame[[i]])[1]<-"#chr"
+    colnames(list_DataFrame[[i]])[1] <- "#chr"
     write.table(list_DataFrame[[i]], file=filepath, quote=FALSE,sep='\t',
     row.names=FALSE)
 
@@ -170,9 +169,9 @@ generate our summary metrics.
 
 ```{r}
 # Create a single dataframe with data for all samples
-combined_files<-list_DataFrame[[1]]
+combined_files <- list_DataFrame[[1]]
 for (i in 2:length(list_DataFrame)) {
-    combined_files<-rbind(combined_files, list_DataFrame[[i]])
+    combined_files <- rbind(combined_files, list_DataFrame[[i]])
 }
 ```
 
@@ -189,7 +188,7 @@ Lets create a table to summarize useful metrics about the CpG sites
 
 ```{r}
 # Create table of unique positions and mu/theta values
-mu_theta<-unique(subset(combined_files, select=-c(x,n,pVal, isHypo, pAdj, 
+mu_theta <- unique(subset(combined_files, select=-c(x,n,pVal, isHypo, pAdj, 
         effSize, sampleID)))
 ```
 
@@ -218,7 +217,7 @@ Now let's look at the distribitions of other important values.
 ```{r}
 # Create table of unique positions and depth/p-val/padj for each position in 
 # each case
-depth_pvals_eff<-unique(combined_files)
+depth_pvals_eff <- unique(combined_files)
 ```
 
 ### Summary of read depth distributions
@@ -254,20 +253,20 @@ summary(depth_pvals_eff$effSize)
 ### Outliers and most significant CpG site
 
 Now lets see if any samples are extreme outliers in terms of number of CpG sites
-called significant (p<=0.05):
+called significant (p <= 0.05):
 
 ```{r}
 # Detection of outliers based on number of significant sites
 # Count significant CpG sites per patient
-signif_only<-subset(combined_files, pVal<=0.05)
-signif_counts<-signif_only %>% count(sampleID)
+signif_only <- subset(combined_files, pVal <= 0.05)
+signif_counts <- signif_only %>% count(sampleID)
 
 # Calculate the percentiles of the number of significant sites
-sig_quantiles<-quantile(signif_counts$n,
+sig_quantiles <- quantile(signif_counts$n,
         probs=c(0.025, 0.05, 0.95, 0.975, 0.999))
 
 # Check if nay patients are above the 99.9th percentile
-subset(signif_counts, n>=sig_quantiles["99.9%"])
+subset(signif_counts, n >= sig_quantiles["99.9%"])
 ```
 We can see that one patient appears to be an extreme outlier.
 
@@ -275,7 +274,7 @@ Let's also have a look at which site is most significant.
 
 ```{r}
 # What is the most significant CpG site between all samples?
-subset(combined_files, pVal==min(combined_files$pVal))
+subset(combined_files, pVal == min(combined_files$pVal))
 ```
 
 ---
@@ -305,13 +304,12 @@ steps.
 
 ```{r, message=FALSE}
 # Load annotatr for annotation of genomic regions
-library('annotatr')
 
 #Assign approproate genome version based on alignments
-genome.version="hg19"
+genome.version <- "hg19"
 
 # Read in the files with adjusted p-values from the previous steps
-padjusted_in<-dir(extdata,pattern="*.padj")
+padjustedIn <- dir(extdata,pattern="*.padj")
 ```
 
 Now we provide a function that will annotate each file with annotations
@@ -319,15 +317,15 @@ from `r Biocpkg("annotatr")`.
 
 ```{r}
 # Function to annotate Borealis output with the annotatr package
-annot_func<-function(file){
-    basename<-file
+annotFunc <- function(file){
+    basename <- file
     # Define data-type of non-traditional BED file columns from BOREALIS output
-    extracols=c(x="numeric", n="numeric", mu="numeric", theta="numeric",
+    extracols <- c(x="numeric", n="numeric", mu="numeric", theta="numeric",
     pVal="numeric", isHypo="character", effSize="numeric",
     sampleID="character", pAdj="numeric")
 
     #Read in file to annotatr
-    dmrs.gr<-annotatr::read_regions(con=file, genome=genome.version,
+    dmrs.gr <- annotatr::read_regions(con=file, genome=genome.version,
     extraCols=extracols, format='bed')
 
     # Give each region a unique ID
@@ -342,25 +340,25 @@ annot_func<-function(file){
 
     # Annotate
     annots <- paste(genome.version,annots,sep="")
-    annots.all.gr = build_annotations(genome = genome.version,
+    annots.all.gr <- annotatr::build_annotations(genome = genome.version,
     annotations = annots)
-    dmrs.annotatr.gr=annotate_regions(regions=dmrs.gr,
+    dmrs.annotatr.gr <- annotatr::annotate_regions(regions=dmrs.gr,
     annotations=annots.all.gr, ignore.strand=TRUE, minoverlap=0)
-    dmrs.annotatr.df<-data.frame(dmrs.annotatr.gr)
+    dmrs.annotatr.df <- data.frame(dmrs.annotatr.gr)
 
     # Sort annotated CpG sites by the number of features they get annotated with
-    freq.table <-as.data.frame(table(dmrs.annotatr.df$dmrId))
+    freq.table <- as.data.frame(table(dmrs.annotatr.df$dmrId))
     colnames(freq.table) <- c('dmrId','Freq')
-    freq.table<-freq.table[order(freq.table$Freq,decreasing=TRUE),]
-    dmrs.annotatr.df$rkg<- match(dmrs.annotatr.df$dmrId, freq.table$dmrId)
-    dmrs.annotatr.df<- dmrs.annotatr.df[order(dmrs.annotatr.df$rkg),]
-    dmrs.annotatr.df<-merge(dmrs.annotatr.df, freq.table, by.x="dmrId",
+    freq.table <- freq.table[order(freq.table$Freq,decreasing=TRUE),]
+    dmrs.annotatr.df$rkg <- match(dmrs.annotatr.df$dmrId, freq.table$dmrId)
+    dmrs.annotatr.df <- dmrs.annotatr.df[order(dmrs.annotatr.df$rkg),]
+    dmrs.annotatr.df <- merge(dmrs.annotatr.df, freq.table, by.x="dmrId",
     by.y="dmrId")
     dmrs.annotatr.df <- dmrs.annotatr.df[order(dmrs.annotatr.df$rkg),]
 
     #Create dataframe for output to file and ordwer rows
-    finalout.df<-dmrs.annotatr.df
-    finalout.df<-finalout.df[order(finalout.df$rkg),]
+    finalout.df <- dmrs.annotatr.df
+    finalout.df <- finalout.df[order(finalout.df$rkg),]
 
     # Write out to new files (ending *.annot)
     filepath <- paste(basename,'.annot',sep="")
@@ -376,26 +374,25 @@ overhead.
 
 ```{r, message=FALSE, results='hide', warning=FALSE}
 # Now process each file individually and in parallel
-library(future.apply)
 # Run annotation function
-plan(multisession)
-future_lapply(file.path(extdata,c(padjusted_in)), 
-        function(i) {annot_func(i)}, future.seed=TRUE)
+future::plan("multisession")
+future.apply::future_lapply(file.path(extdata,c(padjustedIn)), 
+        function(i) {annotFunc(i)}, future.seed=TRUE)
 ```
 
 With the annotation complete, we can read in the new files for inspection.
 
 ```{r}
 # Read in annotated files to summarize CpG data across features
-annots<-dir(extdata,pattern="*.annot$")
-all_annot<-bind_rows(lapply(file.path(extdata,annots), fread))
+annots <- dir(extdata,pattern="*.annot$")
+allAnnot <- dplyr::bind_rows(lapply(file.path(extdata,annots), data.table::fread))
 ```
 
 Now let's look at that most significant site again - with annotations.
 
 ```{r}
 # Extract the annotated site with the smallest p-value
-subset(all_annot, pVal==min(all_annot$pVal))
+subset(allAnnot, pVal == min(allAnnot$pVal))
 ```
 
 This CpG site overlaps multiple genes  and features in Patient 72 but perhaps 
@@ -410,8 +407,8 @@ Let's use a handy Borealis plotting function to investigate this site further.
 plotCpGsite("chr14:24780288",
 sampleOfInterest="patient_72",
 modelFile=file.path(extdata,"/CpG_model_chr14.csv"),
-methCountFile=file.path(extdata,"/CpG_model_rawMethCount.tsv"),
-totalCountFile=file.path(extdata,"CpG_model_rawTotalCount.tsv"))
+methCountFile=file.path(extdata,"/CpG_model_rawMethCount_chr14.tsv"),
+totalCountFile=file.path(extdata,"CpG_model_rawTotalCount_chr14.tsv"))
 ```
 The graph above shows us the expected methylation profile under our model, and
 how far our site deviates from the expected methylation profile.  As you can
@@ -432,11 +429,10 @@ will make use of corrected p-values and ignore uncorrected p-values.  Your
 analysis can optionally use an alternative approach.
 
 ```{r}
-library(tidyr)
 # Read in annotated files to summarize CpG data across features
-annots<-dir(extdata,pattern="*.annot$")
+annots <- dir(extdata,pattern="*.annot$")
 # corrected p-value threshold to call sites significant
-padj_thresh<-0.05
+padjThresh <- 0.05
 
 ```
 
@@ -445,96 +441,96 @@ or can easily customize it to create summary metrics specific to your
 application.
 
 ```{r}
-collapse_func<-function(file) {
+collapseFunc <- function(file) {
 # Process each file, summarize data across features and output new files
-    input<-read.table(file, header=TRUE, stringsAsFactors=FALSE)
+    input <- read.table(file, header=TRUE, stringsAsFactors=FALSE)
 
     # Calculate how may CpGs per annotatr feature and store in dataframe
-    featureids<-input$annot.id
-    featurecnts<-as.data.frame(table(featureids))
-    colnames(featurecnts)<-c("annot.id", "NoSites")
+    featureids <- input$annot.id
+    featurecnts <- as.data.frame(table(featureids))
+    colnames(featurecnts) <- c("annot.id", "NoSites")
 
     # Calculate how many sites per feature pass p-value threshold
     # Add data to new summary dataframe
-    signifonly<-subset(input, pAdj<=padj_thresh)
+    signifonly <- subset(input, pAdj<=padjThresh)
     if (nrow(signifonly) > 0) {
-        signifonly<-signifonly$annot.id
-        signifonlycnt<-as.data.frame(table(signifonly))
-        colnames(signifonlycnt)<-c("annot.id", "signifCount")
-        featurecnts<-merge(featurecnts, signifonlycnt, by.x="annot.id",
+        signifonly <- signifonly$annot.id
+        signifonlycnt <- as.data.frame(table(signifonly))
+        colnames(signifonlycnt) <- c("annot.id", "signifCount")
+        featurecnts <- merge(featurecnts, signifonlycnt, by.x="annot.id",
         by.y="annot.id", all.x=TRUE)
-    } else {featurecnts$signifCount<-0}
+    } else {featurecnts$signifCount <- 0}
 
 
     # Calculate a range of summary metrics per feature
 
     # What fraction of sites per feature pass p-value threshold?
-    featurecnts$fractionSignif<-featurecnts$signifCount/featurecnts$NoSites
+    featurecnts$fractionSignif <- featurecnts$signifCount/featurecnts$NoSites
 
     # Create a new variable for storing a p-value combined across
     # all sites in a feature (Fisher's)
-    featurecnts$newPVAL<-NA
+    featurecnts$newPVAL <- NA
 
     # Create some intermediate tables to facilitate calculations
-    locations<-subset(input, select=c("annot.id", "annot.seqnames",
+    locations <- subset(input, select=c("annot.id", "annot.seqnames",
     "annot.start", "annot.end"))
-    locations<-unique(locations)
-    featurecnts<-merge(locations, featurecnts, by.x="annot.id", by.y="annot.id")
-    genemap<-cbind(input$annot.symbol, input$annot.id, input$annot.tx_id,
+    locations <- unique(locations)
+    featurecnts <- merge(locations, featurecnts, by.x="annot.id", by.y="annot.id")
+    genemap <- cbind(input$annot.symbol, input$annot.id, input$annot.tx_id,
     input$annot.width, input$sampleID)
-    colnames(genemap)<-c("annot.symbol", "annot.id", "annot.tx_id", 
+    colnames(genemap) <- c("annot.symbol", "annot.id", "annot.tx_id", 
         "annot.width","SampleID")
-    genemap<-unique(genemap)
-    pvals<-as.data.frame(cbind(input$annot.id, input$pAdj, input$isHypo,
+    genemap <- unique(genemap)
+    pvals <- as.data.frame(cbind(input$annot.id, input$pAdj, input$isHypo,
     input$effSize))
-    colnames(pvals)<-c("annot.id", "pAdj", "isHypo", "effSize")
-    pvals$pAdj<-(as.numeric(as.character(pvals$pAdj)))
-    pvals$effSize<-(as.numeric(as.character(pvals$effSize)))
+    colnames(pvals) <- c("annot.id", "pAdj", "isHypo", "effSize")
+    pvals$pAdj <- (as.numeric(as.character(pvals$pAdj)))
+    pvals$effSize <- (as.numeric(as.character(pvals$effSize)))
 
     # Function to calculate per feature metrics in parallel
-    per_feat_func<-function(annot_id){
-        ss<-subset(pvals, annot.id==annot_id)
-        sshypo<-subset(ss, isHypo=="TRUE")
-        ssnohypo<-subset(ss, isHypo=="FALSE")
-        ssna<-subset(ss, is.na(isHypo))
-        df<-length(ss$pAdj)*2
-        dfhypo<-length(sshypo$pAdj)*2
-        dfnohypo<-length(ssnohypo$pAdj)*2
-        pout<-pchisq(-2*sum(log(c(ss$pAdj))),df,lower.tail=FALSE)
-        pouthypo<-pchisq(-2*sum(log(c(sshypo$pAdj))),dfhypo,lower.tail=FALSE)
-        poutnohypo<-pchisq(-2*sum(log(c(ssnohypo$pAdj))),
+    perFeatFunc <- function(annot_id){
+        ss <- subset(pvals, annot.id == annot_id)
+        sshypo <- subset(ss, isHypo == "TRUE")
+        ssnohypo <- subset(ss, isHypo == "FALSE")
+        ssna <- subset(ss, is.na(isHypo))
+        df <- length(ss$pAdj)*2
+        dfhypo <- length(sshypo$pAdj)*2
+        dfnohypo <- length(ssnohypo$pAdj)*2
+        pout <- pchisq(-2*sum(log(c(ss$pAdj))),df,lower.tail=FALSE)
+        pouthypo <- pchisq(-2*sum(log(c(sshypo$pAdj))),dfhypo,lower.tail=FALSE)
+        poutnohypo <- pchisq(-2*sum(log(c(ssnohypo$pAdj))),
                 dfnohypo,lower.tail=FALSE)
-        medeshypo<-median(c(sshypo$effSize))
-        medesnohypo<-median(c(ssnohypo$effSize))
-        ishypo<-length(ss$isHypo[which(ss$isHypo=="TRUE" & 
-                ss$pAdj<=padj_thresh)])
-        ishypo_all<-length(ss$isHypo[which(ss$isHypo=="TRUE")])
-        ishyper<-length(ss$isHypo[which(ss$isHypo=="FALSE" &
-                ss$pAdj<=padj_thresh)])
-        ishyper_all<-length(ss$isHypo[which(ss$isHypo=="FALSE")])
-        is_na<-length(ss$isHypo[which(is.na(ss$isHypo))])
-        best_pval<-min(ss$pAdj)
-        min_es<-min(ss$effSize)
-        max_es<-max(ss$effSize)
-        best_es<-ifelse(abs(max_es)>abs(min_es), max_es, min_es)
+        medeshypo <- median(c(sshypo$effSize))
+        medesnohypo <- median(c(ssnohypo$effSize))
+        ishypo <- length(ss$isHypo[which(ss$isHypo == "TRUE" & 
+                ss$pAdj <= padjThresh)])
+        ishypoAll <- length(ss$isHypo[which(ss$isHypo == "TRUE")])
+        ishyper <- length(ss$isHypo[which(ss$isHypo == "FALSE" &
+                ss$pAdj <= padjThresh)])
+        ishyperAll <- length(ss$isHypo[which(ss$isHypo == "FALSE")])
+        isNa <- length(ss$isHypo[which(is.na(ss$isHypo))])
+        bestPval <- min(ss$pAdj)
+        minEs <- min(ss$effSize)
+        maxEs <- max(ss$effSize)
+        bestEs <- ifelse(abs(maxEs) > abs(minEs), maxEs, minEs)
 
-        combout<-paste(ishypo, ishypo_all, ishyper, ishyper_all, is_na,
-        pout, pouthypo, medeshypo, poutnohypo, medesnohypo, best_pval,
-        best_es, sep=",")
+        combout <- paste(ishypo, ishypoAll, ishyper, ishyperAll, isNa,
+        pout, pouthypo, medeshypo, poutnohypo, medesnohypo, bestPval,
+        bestEs, sep=",")
 
         return(combout)
     }
 
     # Execute summarization
-    plan(multisession)
-    newPvals<-future_lapply(seq_along(featurecnts$annot.id), function(i) {
-    per_feat_func(featurecnts$annot.id[i])})
+    future::plan(future::multisession)
+    newPvals <- future.apply::future_lapply(seq_along(featurecnts$annot.id), function(i) {
+    perFeatFunc(featurecnts$annot.id[i])})
 
     # Break apart data output by parallel annotation
-    newPvals<-as.vector(newPvals)
-    newPvals<-unlist(newPvals)
-    newPvals<-as.data.frame(newPvals)
-    newPvals<-separate(newPvals, newPvals, into=c("isHypoSig", "isHypoAll",
+    newPvals <- as.vector(newPvals)
+    newPvals <- unlist(newPvals)
+    newPvals <- as.data.frame(newPvals)
+    newPvals <- tidyr::separate(newPvals, newPvals, into=c("isHypoSig", "isHypoAll",
     "isHyperSig", "isHyperAll", "isNA", "pAdj", "pAdjHypo", "MedESHypo",
     "pAdjHyper", "MedESHyper", "Best_ss_pAdj", "Best_ss_ES"), sep=",")
 
@@ -542,35 +538,35 @@ collapse_func<-function(file) {
     # Features are described below
 
     # How many sites are hypomethylated and significant?
-    featurecnts$isHypoSig<-newPvals$isHypoSig
+    featurecnts$isHypoSig <- newPvals$isHypoSig
     # How many sites are hypomethylated regardless of p-value?
-    featurecnts$isHypoAll<-newPvals$isHypoAll
+    featurecnts$isHypoAll <- newPvals$isHypoAll
     # How many sites are hypermethylated and significant?
-    featurecnts$isHyperSig<-newPvals$isHyperSig
+    featurecnts$isHyperSig <- newPvals$isHyperSig
     # How many sites are hypermethylated regardless of p-value?
-    featurecnts$isHyperAll<-newPvals$isHyperAll
+    featurecnts$isHyperAll <- newPvals$isHyperAll
     # How many sites are NA i.e. no direction of change called?
-    featurecnts$isNA<-newPvals$isNA
+    featurecnts$isNA <- newPvals$isNA
     # New combined p-value
-    featurecnts$newPVAL<-newPvals$pAdj
+    featurecnts$newPVAL <- newPvals$pAdj
     # Combined p-value for sites called hypomethylated only
-    featurecnts$newPVALHypo<-newPvals$pAdjHypo
+    featurecnts$newPVALHypo <- newPvals$pAdjHypo
     # Median effect size for sites called hypomethylated
-    featurecnts$MedESHypo<-newPvals$MedESHypo
+    featurecnts$MedESHypo <- newPvals$MedESHypo
     # Combined p-value for sites called hypermethylated only
-    featurecnts$newPVALHyper<-newPvals$pAdjHyper
+    featurecnts$newPVALHyper <- newPvals$pAdjHyper
     # Median effect size for sites called hypermethylated
-    featurecnts$MedESHyper<-newPvals$MedESHyper
+    featurecnts$MedESHyper <- newPvals$MedESHyper
     # Best single-site p-value in the feature
-    featurecnts$Best_ss_pAdj<-newPvals$Best_ss_pAdj
+    featurecnts$Best_ss_pAdj <- newPvals$Best_ss_pAdj
     # Most extreme effect size in the feature
-    featurecnts$Best_ss_ES<-newPvals$Best_ss_ES
+    featurecnts$Best_ss_ES <- newPvals$Best_ss_ES
 
     # Merge with intermediate data and output final file
-    summarized<-merge(featurecnts, genemap, by.x="annot.id", by.y="annot.id")
-    summarized$signifCount[is.na(summarized$signifCount)]<-0
-    summarized$fractionSignif[is.na(summarized$fractionSignif)]<-0
-    output1<-paste(file, "_", padj_thresh, "_feature_collapse.txt", sep="")
+    summarized <- merge(featurecnts, genemap, by.x="annot.id", by.y="annot.id")
+    summarized$signifCount[is.na(summarized$signifCount)] <- 0
+    summarized$fractionSignif[is.na(summarized$fractionSignif)] <- 0
+    output1 <- paste(file, "_", padjThresh, "_feature_collapse.txt", sep="")
     write.table(summarized, file=output1, quote=FALSE,sep='\t',row.names=FALSE)
 }
 ```
@@ -578,20 +574,20 @@ collapse_func<-function(file) {
 Okay - now let's run that function and do the summarization:
 
 ```{r, warning=FALSE, message=FALSE, results='hide'}
-future_lapply(file.path(extdata,c(annots)),
-        function(i) {collapse_func(i)})
+future.apply::future_lapply(file.path(extdata,c(annots)),
+        function(i) {collapseFunc(i)})
 ```
 
 Now let's read in those newly summarized results and have a look:
 
 ```{r}
 # Read in merged files to investigate on a per-feature level
-collapsed<-dir(extdata,pattern="*.collapse.txt$")
-collapsed<-file.path(extdata,c(collapsed))
-all_collapsed<-bind_rows(lapply(collapsed, fread))
+collapsed <- dir(extdata,pattern="*.collapse.txt$")
+collapsed <- file.path(extdata,c(collapsed))
+allCollapsed <- dplyr::bind_rows(lapply(collapsed, data.table::fread))
 
 # Select the feature with the lowest individual p-value
-subset(all_collapsed, Best_ss_pAdj==min(all_annot$pAdj))
+subset(allCollapsed, Best_ss_pAdj == min(allAnnot$pAdj))
 ```
 
 You can see that the outlier site from earlier isn't alone - multiple other 
