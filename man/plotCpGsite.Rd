@@ -37,11 +37,11 @@ in each sample at that CpG site.
 }
 \examples{
 extdata <- system.file("extdata", package="borealis")
-plots <- plotCpGsite(c("chr1:71732","chr1:71788"),
-                sampleOfInterest="pat1",
-                modelFile=file.path(extdata,'CpG_model_chr1.csv'),
-                methCountFile=file.path(extdata,'CpG_model_rawMethCount.tsv'),
-                totalCountFile=file.path(extdata,"CpG_model_rawTotalCount.tsv"))
+plots <- plotCpGsite("chr14:24780288",
+        sampleOfInterest="patient_72",
+        modelFile=file.path(extdata,"CpG_model_chr14.csv"),
+        methCountFile=file.path(extdata,"CpG_model_rawMethCount_chr14.tsv"),
+        totalCountFile=file.path(extdata,"CpG_model_rawTotalCount_chr14.tsv"))
 
 }
 \value{

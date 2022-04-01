@@ -55,7 +55,7 @@ summary statistics for each sample in the cohort at each CpG site.
 }
 \examples{
 extdata <- system.file("extdata","bismark", package="borealis")
-results <- runBorealis(extdata,nThreads=1,chrs="chr1")
+results <- runBorealis(extdata,nThreads=2,chrs="chr14",suffix=".gz")
 file.remove(c('CpG_model_chr1.csv', 'CpG_model_rawMethCount.tsv',
     'CpG_model_rawTotalCount.tsv', 'borealis_pat1_chr1_DMLs.tsv',
     'borealis_pat2_chr1_DMLs.tsv', 'borealis_pat3_chr1_DMLs.tsv',

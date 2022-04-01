@@ -28,9 +28,9 @@ predict using previously estimated model specified by \code{modelFile}.
 }
 \examples{
 extdata <- system.file("extdata", package="borealis")
-df <- runSingleNewSample(file.path(extdata,'bismark','pat1',
-                'pat1_merged.cov.gz.CpG_report.merged_CpG_evidence.cov.gz'),
-                'out.txt',modelFile=file.path(extdata,'CpG_model_chr1.csv'))
+df <- runSingleNewSample(file.path(extdata,'bismark','patient_72',
+                            'patient_73.gz'),'out.txt',
+                            modelFile=file.path(extdata,'CpG_model_chr14.csv'))
 file.remove('out.txt')
 }
 \value{

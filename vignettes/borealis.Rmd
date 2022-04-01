@@ -13,56 +13,65 @@ output:
     BiocStyle::html_document
 vignette: |
     %\VignetteIndexEntry{Borealis outlier methylation detection}
-    %\VignetteEngine{knitr::rmarkdown}
     %\VignetteEncoding{UTF-8}
+    %\VignetteEngine{knitr::rmarkdown}
+editor_options: 
+  markdown: 
+    wrap: 80
 ---
+
 # Introduction
-Borealis is a package for the detection of outlier methylation at 
-single CpG-site resolution, where a cohort of 3 to 100+ samples can be processed 
-and each sample is  analyzed versus the rest of the cohort to identify outlier 
-hypermethylated or hypomethylated CpG sites.  This form of one vs many analysis
-differs from traditional case vs control group analyses and has been successful 
-in domains such as rare genetic disease driver identification.  Furthermore, 
-the ability of Borealis to identify single CpG-site differences 
-offers a higher resolution view of methylation, since increasing numbers of 
-studies demonstrate single-site methylation aberrations in disease.
 
-This vignette provides an introduction to some basic and advanced operations 
-with Borealis using a region of chromosome 14 in a cohort of 20 individuals 
-being investigated for causes of rare genetic disease.  In real-world use, 
+Borealis is a package for the detection of outlier methylation at single
+CpG-site resolution, where a cohort of 3 to 100+ samples can be processed and
+each sample is analyzed versus the rest of the cohort to identify outlier
+hypermethylated or hypomethylated CpG sites. This form of one vs many analysis
+differs from traditional case vs control group analyses and has been successful
+in domains such as rare genetic disease driver identification. Furthermore, the
+ability of Borealis to identify single CpG-site differences offers a higher
+resolution view of methylation, since increasing numbers of studies demonstrate
+single-site methylation aberrations in disease.
+
+This vignette provides an introduction to some basic and advanced operations
+with Borealis using a region of chromosome 14 in a cohort of 20 individuals
+being investigated for causes of rare genetic disease. In real-world use,
 Borealis expects outputs from the aligner `r Githubpkg("/FelixKrueger/Bismark")`
-which is available on Github.  
+which is available on Github.
 
-After completing this vignette users should be able to conduct in-depth 
-methylation analysis and discover biological signals in their data.  After 
-learning basic functionality, creating summary metrics and looking for outlier 
-samples, users will optionally learn how to annotate CpGs with epigenetic 
-feature context using `r Biocpkg("annotatr")`.  Finally users will learn how to 
+After completing this vignette users should be able to conduct in-depth
+methylation analysis and discover biological signals in their data. After
+learning basic functionality, creating summary metrics and looking for outlier
+samples, users will optionally learn how to annotate CpGs with epigenetic
+feature context using `r Biocpkg("annotatr")`. Finally users will learn how to
 summarize CpG data across epigenetic features.
 
 # Installation
-The release version of `r Biocpkg("borealis")` is available via Bioconductor 
-and can be installed as follows:
+
+The release version of `r Biocpkg("borealis")` is available via Bioconductor and
+can be installed as follows:
+
 ```{r, eval=FALSE}
 if (!requireNamespace("BiocManager"))
     install.packages("BiocManager")
 BiocManager::install("borealis")
 ```
-The development version of `r Githubpkg("GarrettJenkinson/borealis")` can be 
-obtained via the Github repository. 
 
-It is easiest to install development versions with the CRANpkg("devtools") 
+The development version of `r Githubpkg("GarrettJenkinson/borealis")` can be
+obtained via the Github repository.
+
+It is easiest to install development versions with the CRANpkg("devtools")
 package as follows:
 
-```r
+``` r
 devtools::install_github('GarrettJenkinson/borealis')
 ```
+
 Changelogs for development releases will be detailed on GitHub releases.
 
-
 # Running Borealis
-Now let's load the test data included with Borealis.  This represents a specific
-region from chromosome 14 (hg19) for 20 of the 94 individuals described in the 
+
+Now let's load the test data included with Borealis. This represents a specific
+region from chromosome 14 (hg19) for 20 of the 94 individuals described in the
 Borealis publication.
 
 ```{r, message=FALSE, warning=FALSE}
@@ -75,8 +84,8 @@ extdata <- system.file("extdata","bismark", package="borealis")
 # Run borealis
 results <- runBorealis(extdata,nThreads=2, chrs="chr14",
         suffix=".gz",
-        outprefix=file.path(extdata,"/borealis_"), 
-        modelOutPrefix=file.path(extdata,"/CpG_model"))
+        outprefix=file.path(extdata,"vignette_borealis_"), 
+        modelOutPrefix=file.path(extdata,"vignette_CpG_model"))
 
 
 
@@ -91,9 +100,10 @@ Now let's quickly see what files we have generated:
 print(borealis_in)
 ```
 
-Looks good?  Let's continue!
+Looks good? Let's continue!
 
 # Basic processing of Borealis data
+
 Now you should have successfully loaded the provided methylation data, run
 Borealis and created a list of its output files.
 
@@ -103,20 +113,19 @@ First we'll read in the data for each of the 20 patients and create dataframes
 for each:
 
 ```{r, message=FALSE, warning=FALSE}
-require(dplyr)
+suppressMessages(require(dplyr)) # GARRETT: remove this?
 
 # Read in list of Borealis output files and create a dataframe for each
 for (file in borealis_in) {
-    name=file
-    name=sub("_DMLs.tsv", "", name)
+    name <- file
+    name <- sub("_DMLs.tsv", "", name)
     assign(name, read.table(file.path(extdata,file), header=TRUE,
         stringsAsFactors=FALSE))
 }
 
-
 # Create a list of the newly created dataframes
-list_object_names=ls(pattern="borealis_patient")
-list_DataFrame=lapply(list_object_names, get)
+list_object_names <- ls(pattern="borealis_patient")
+list_DataFrame <- lapply(list_object_names, get)
 ```
 
 Let's have a look at the newly created dataframe names:
@@ -125,7 +134,7 @@ Let's have a look at the newly created dataframe names:
 print(list_object_names)
 ```
 
-Looks good - now let's have a look at one file to get familiar with the fields 
+Looks good - now let's have a look at one file to get familiar with the fields
 of data:
 
 ```{r}
@@ -135,36 +144,35 @@ head(list_DataFrame[[1]])
 Okay - now let's start summarizing some of this information across samples.
 
 ## Generating summary metrics across all samples
-First we will add two new columns to each data frame.  One column will be the
+
+First we will add two new columns to each data frame. One column will be the
 sample ID for each patient, to enable us to distinguish between results later.
-The second will contain a corrected p-value for each CpG site per-patient.  
+The second will contain a corrected p-value for each CpG site per-patient.
 
-We decouple the generation of adjusted p-values from the main package since 
-users may wish to use uncorrected p-values or generate corrected p-values in a 
+We decouple the generation of adjusted p-values from the main package since
+users may wish to use uncorrected p-values or generate corrected p-values in a
 specific fashion depending on their analysis.
-
-
 
 ```{r}
 # Add sample ID and a corrected p-value to each and output as new files (.padj)
-for (i in 1:length(list_DataFrame)) {
+for (i in seq_along(list_DataFrame)) {
     sample=sub("_chr.*", "", list_object_names[i])
     list_DataFrame[[i]]$sampleID=sample
     list_DataFrame[[i]]$pAdj=p.adjust( list_DataFrame[[i]]$pVal, method="BH")
     filepath <- file.path(extdata,paste(list_object_names[i],'.padj',sep=""))
     colnames(list_DataFrame[[i]])[1] <- "#chr"
     write.table(list_DataFrame[[i]], file=filepath, quote=FALSE,sep='\t',
-    row.names=FALSE)
-
+    row.names=FALSE) ## GARRETT: REMOVE?
 }
 ```
+
 Let's have a look to see those newly added columns:
 
 ```{r}
 head(list_DataFrame[[1]])
 ```
 
-Now we will create a single dataframe containing data for all samples and 
+Now we will create a single dataframe containing data for all samples and
 generate our summary metrics.
 
 ```{r}
@@ -182,9 +190,7 @@ for (i in 2:length(list_DataFrame)) {
 nrow(combined_files)
 ```
 
-
 Lets create a table to summarize useful metrics about the CpG sites
-
 
 ```{r}
 # Create table of unique positions and mu/theta values
@@ -210,9 +216,7 @@ summary(mu_theta$mu)
 summary(mu_theta$theta)
 ```
 
-
 Now let's look at the distribitions of other important values.
-
 
 ```{r}
 # Create table of unique positions and depth/p-val/padj for each position in 
@@ -221,30 +225,35 @@ depth_pvals_eff <- unique(combined_files)
 ```
 
 ### Summary of read depth distributions
+
 ```{r}
 #Summarize read depths
 summary(depth_pvals_eff$n)
 ```
 
 ### Summary of uncorrected p-values
+
 ```{r}
 #Summarize pvals
 summary(depth_pvals_eff$pVal)
 ```
 
 ### Summary of corrected p-values
+
 ```{r}
 #Summarize corrected pvals
 summary(depth_pvals_eff$pAdj)
 ```
 
 ### Summary of methylation fraction across sites
+
 ```{r}
 #Summarize fraction of methylation
 summary(depth_pvals_eff$x/depth_pvals_eff$n)
 ```
 
 ### Summary of effect sizes
+
 ```{r}
 #Summarize effect size
 summary(depth_pvals_eff$effSize)
@@ -253,7 +262,7 @@ summary(depth_pvals_eff$effSize)
 ### Outliers and most significant CpG site
 
 Now lets see if any samples are extreme outliers in terms of number of CpG sites
-called significant (p <= 0.05):
+called significant (p \<= 0.05):
 
 ```{r}
 # Detection of outliers based on number of significant sites
@@ -268,6 +277,7 @@ sig_quantiles <- quantile(signif_counts$n,
 # Check if nay patients are above the 99.9th percentile
 subset(signif_counts, n >= sig_quantiles["99.9%"])
 ```
+
 We can see that one patient appears to be an extreme outlier.
 
 Let's also have a look at which site is most significant.
@@ -277,30 +287,32 @@ Let's also have a look at which site is most significant.
 subset(combined_files, pVal == min(combined_files$pVal))
 ```
 
----
+--------------------------------------------------------------------------------
 
-Depending on your use-case, this might be enough information for you and you 
+Depending on your use-case, this might be enough information for you and you
 could stop here, or you could extract the top 100 outlier sites.
 
-Another useful step is contextualizing CpG sites on the basis of which 
-epigenetic features they reside in.  We provide an example 
-of how to do so in the following section.
-
+Another useful step is contextualizing CpG sites on the basis of which
+epigenetic features they reside in. We provide an example of how to do so in the
+following section. We will do this for the single sample containing the most
+significant CpG site for the sake of brevity in the vignette.
 
 # Annotating outputs with epigenetic features
-In this section we will add further biological context to our results by 
-annotating epigenetically relevant features.  We will use the 
-`r Biocpkg("annotatr")` package but you can use your favorite tool instead.  The 
-release version of `r Biocpkg("annotatr")` is available via Bioconductor 
-and can be installed as follows:
+
+In this section we will add further biological context to our results by
+annotating epigenetically relevant features. We will use the
+`r Biocpkg("annotatr")` package but you can use your favorite tool instead. The
+release version of `r Biocpkg("annotatr")` is available via Bioconductor and can
+be installed as follows:
+
 ```{r, eval=FALSE}
 if (!requireNamespace("BiocManager"))
     install.packages("BiocManager")
 BiocManager::install("annotatr")
 ```
 
-Now let's load the package and read in the files we created in the previous
-steps.
+Now let's load the package and read in the file we created in the previous steps
+for the patient with the most significant CpG site.
 
 ```{r, message=FALSE}
 # Load annotatr for annotation of genomic regions
@@ -310,10 +322,13 @@ genome.version <- "hg19"
 
 # Read in the files with adjusted p-values from the previous steps
 padjustedIn <- dir(extdata,pattern="*.padj")
+
+# Now we subset to the single patient for the vignette
+padjustedIn <- padjustedIn[grep("patient_72",padjustedIn)]
 ```
 
-Now we provide a function that will annotate each file with annotations
-from `r Biocpkg("annotatr")`.
+Now we provide a function that will annotate each file with annotations from
+`r Biocpkg("annotatr")`.
 
 ```{r}
 # Function to annotate Borealis output with the annotatr package
@@ -368,24 +383,26 @@ annotFunc <- function(file){
 ```
 
 Now we can use this function to annotate our files in parallel. This part might
-take a little while even with small files since database loading creates 
+take a little while even with small files since database loading creates
 overhead.
-
 
 ```{r, message=FALSE, results='hide', warning=FALSE}
 # Now process each file individually and in parallel
 # Run annotation function
-future::plan("multisession")
-future.apply::future_lapply(file.path(extdata,c(padjustedIn)), 
-        function(i) {annotFunc(i)}, future.seed=TRUE)
+#future::plan("multisession")
+#future.apply::future_lapply(file.path(extdata,c(padjustedIn)), 
+#        function(i) {annotFunc(i)}, future.seed=TRUE)
+annotFunc(file.path(extdata,padjustedIn))
 ```
 
 With the annotation complete, we can read in the new files for inspection.
 
 ```{r}
-# Read in annotated files to summarize CpG data across features
+# Read in annotated file to summarize CpG data across features
 annots <- dir(extdata,pattern="*.annot$")
-allAnnot <- dplyr::bind_rows(lapply(file.path(extdata,annots), data.table::fread))
+allAnnot <- data.table::fread(file.path(extdata,annots)) # GARRETT: remove DT?
+#allAnnot <- dplyr::bind_rows(lapply(file.path(extdata,annots), 
+#                                    data.table::fread))
 ```
 
 Now let's look at that most significant site again - with annotations.
@@ -395,52 +412,82 @@ Now let's look at that most significant site again - with annotations.
 subset(allAnnot, pVal == min(allAnnot$pVal))
 ```
 
-This CpG site overlaps multiple genes  and features in Patient 72 but perhaps 
-most interesting is the LTB4R promoter.  
+This CpG site overlaps multiple genes and features in Patient 72 but perhaps
+most interesting is the LTB4R promoter.
 
 Let's use a handy Borealis plotting function to investigate this site further.
-
-
 
 ```{r sg, fig.wide=TRUE, fig.cap="plotCpGsite function", echo=FALSE}
 # Use Borealis plotting function to investigate this site further
 plotCpGsite("chr14:24780288",
 sampleOfInterest="patient_72",
-modelFile=file.path(extdata,"/CpG_model_chr14.csv"),
-methCountFile=file.path(extdata,"/CpG_model_rawMethCount_chr14.tsv"),
-totalCountFile=file.path(extdata,"CpG_model_rawTotalCount_chr14.tsv"))
+modelFile=file.path(extdata,"vignette_CpG_model_chr14.csv"),
+methCountFile=file.path(extdata,"vignette_CpG_model_rawMethCount_chr14.tsv"),
+totalCountFile=file.path(extdata,"vignette_CpG_model_rawTotalCount_chr14.tsv"))
 ```
-The graph above shows us the expected methylation profile under our model, and
-how far our site deviates from the expected methylation profile.  As you can
-see this site stands out.  It is hypermethylated.
 
-Now what if we wanted to know if this site is surrounded by other 
-hypermethylated CpG sites?  We could do this using the data we have already 
-generated, but an advanced approach that will be useful for further analysis
-is to summarize all our data across epigenetic features.
+The graph above shows us the expected methylation profile under our model, and
+how far our site deviates from the expected methylation profile. As you can see
+this site stands out. It is hypermethylated.
+
+Now what if we wanted to know if this site is surrounded by other
+hypermethylated CpG sites? We could do this using the data we have already
+generated, but an advanced approach that will be useful for further analysis is
+to summarize all our data across epigenetic features.
 
 That's what we will do next.
 
 # Summarizing single-site data across epigenetic features
 
-First lets read in our annotated files and set a p-value we will use to 
-determine significance in our feature-summarized data.  In our summarization we
-will make use of corrected p-values and ignore uncorrected p-values.  Your
-analysis can optionally use an alternative approach.
+First lets read in our annotated file and set a p-value we will use to determine
+significance in our feature-summarized data. In our summarization we will make
+use of corrected p-values and ignore uncorrected p-values. Your analysis can
+optionally use an alternative approach.
 
 ```{r}
-# Read in annotated files to summarize CpG data across features
-annots <- dir(extdata,pattern="*.annot$")
 # corrected p-value threshold to call sites significant
 padjThresh <- 0.05
 
 ```
 
-Now we will create a function to do the summarization.  You can use this as-is
-or can easily customize it to create summary metrics specific to your
-application.
+Now we will create a function to do the summarization. You can use this as-is or
+can easily customize it to create summary metrics specific to your application.
 
 ```{r}
+
+# Function to calculate per feature metrics in parallel
+perFeatFunc <- function(annot_id,pvals){
+    ss <- subset(pvals, annot.id == annot_id)
+    sshypo <- subset(ss, isHypo == "TRUE")
+    ssnohypo <- subset(ss, isHypo == "FALSE")
+    ssna <- subset(ss, is.na(isHypo))
+    df <- length(ss$pAdj)*2
+    dfhypo <- length(sshypo$pAdj)*2
+    dfnohypo <- length(ssnohypo$pAdj)*2
+    pout <- pchisq(-2*sum(log(c(ss$pAdj))),df,lower.tail=FALSE)
+    pouthypo <- pchisq(-2*sum(log(c(sshypo$pAdj))),dfhypo,lower.tail=FALSE)
+    poutnohypo <- pchisq(-2*sum(log(c(ssnohypo$pAdj))),
+            dfnohypo,lower.tail=FALSE)
+    medeshypo <- median(c(sshypo$effSize))
+    medesnohypo <- median(c(ssnohypo$effSize))
+    ishypo <- length(ss$isHypo[which(ss$isHypo == "TRUE" & 
+            ss$pAdj <= padjThresh)])
+    ishypoAll <- length(ss$isHypo[which(ss$isHypo == "TRUE")])
+    ishyper <- length(ss$isHypo[which(ss$isHypo == "FALSE" &
+            ss$pAdj <= padjThresh)])
+    ishyperAll <- length(ss$isHypo[which(ss$isHypo == "FALSE")])
+    isNa <- length(ss$isHypo[which(is.na(ss$isHypo))])
+    bestPval <- min(ss$pAdj)
+    minEs <- min(ss$effSize)
+    maxEs <- max(ss$effSize)
+    bestEs <- ifelse(abs(maxEs) > abs(minEs), maxEs, minEs)
+
+    combout <- paste(ishypo, ishypoAll, ishyper, ishyperAll, isNa,
+    pout, pouthypo, medeshypo, poutnohypo, medesnohypo, bestPval,
+    bestEs, sep=",")
+
+    return(combout)
+}
 collapseFunc <- function(file) {
 # Process each file, summarize data across features and output new files
     input <- read.table(file, header=TRUE, stringsAsFactors=FALSE)
@@ -475,7 +522,8 @@ collapseFunc <- function(file) {
     locations <- subset(input, select=c("annot.id", "annot.seqnames",
     "annot.start", "annot.end"))
     locations <- unique(locations)
-    featurecnts <- merge(locations, featurecnts, by.x="annot.id", by.y="annot.id")
+    featurecnts <- merge(locations, featurecnts, by.x="annot.id", 
+                            by.y="annot.id")
     genemap <- cbind(input$annot.symbol, input$annot.id, input$annot.tx_id,
     input$annot.width, input$sampleID)
     colnames(genemap) <- c("annot.symbol", "annot.id", "annot.tx_id", 
@@ -487,52 +535,20 @@ collapseFunc <- function(file) {
     pvals$pAdj <- (as.numeric(as.character(pvals$pAdj)))
     pvals$effSize <- (as.numeric(as.character(pvals$effSize)))
 
-    # Function to calculate per feature metrics in parallel
-    perFeatFunc <- function(annot_id){
-        ss <- subset(pvals, annot.id == annot_id)
-        sshypo <- subset(ss, isHypo == "TRUE")
-        ssnohypo <- subset(ss, isHypo == "FALSE")
-        ssna <- subset(ss, is.na(isHypo))
-        df <- length(ss$pAdj)*2
-        dfhypo <- length(sshypo$pAdj)*2
-        dfnohypo <- length(ssnohypo$pAdj)*2
-        pout <- pchisq(-2*sum(log(c(ss$pAdj))),df,lower.tail=FALSE)
-        pouthypo <- pchisq(-2*sum(log(c(sshypo$pAdj))),dfhypo,lower.tail=FALSE)
-        poutnohypo <- pchisq(-2*sum(log(c(ssnohypo$pAdj))),
-                dfnohypo,lower.tail=FALSE)
-        medeshypo <- median(c(sshypo$effSize))
-        medesnohypo <- median(c(ssnohypo$effSize))
-        ishypo <- length(ss$isHypo[which(ss$isHypo == "TRUE" & 
-                ss$pAdj <= padjThresh)])
-        ishypoAll <- length(ss$isHypo[which(ss$isHypo == "TRUE")])
-        ishyper <- length(ss$isHypo[which(ss$isHypo == "FALSE" &
-                ss$pAdj <= padjThresh)])
-        ishyperAll <- length(ss$isHypo[which(ss$isHypo == "FALSE")])
-        isNa <- length(ss$isHypo[which(is.na(ss$isHypo))])
-        bestPval <- min(ss$pAdj)
-        minEs <- min(ss$effSize)
-        maxEs <- max(ss$effSize)
-        bestEs <- ifelse(abs(maxEs) > abs(minEs), maxEs, minEs)
-
-        combout <- paste(ishypo, ishypoAll, ishyper, ishyperAll, isNa,
-        pout, pouthypo, medeshypo, poutnohypo, medesnohypo, bestPval,
-        bestEs, sep=",")
-
-        return(combout)
-    }
-
     # Execute summarization
     future::plan(future::multisession)
-    newPvals <- future.apply::future_lapply(seq_along(featurecnts$annot.id), function(i) {
-    perFeatFunc(featurecnts$annot.id[i])})
+    newPvals <- future.apply::future_lapply(seq_along(featurecnts$annot.id), 
+                                                function(i) {
+    perFeatFunc(featurecnts$annot.id[i],pvals)})
 
     # Break apart data output by parallel annotation
     newPvals <- as.vector(newPvals)
     newPvals <- unlist(newPvals)
     newPvals <- as.data.frame(newPvals)
-    newPvals <- tidyr::separate(newPvals, newPvals, into=c("isHypoSig", "isHypoAll",
-    "isHyperSig", "isHyperAll", "isNA", "pAdj", "pAdjHypo", "MedESHypo",
-    "pAdjHyper", "MedESHyper", "Best_ss_pAdj", "Best_ss_ES"), sep=",")
+    newPvals <- tidyr::separate(newPvals, newPvals, into=c("isHypoSig", 
+    "isHypoAll","isHyperSig", "isHyperAll", "isNA", "pAdj", "pAdjHypo", 
+    "MedESHypo","pAdjHyper", "MedESHyper", "Best_ss_pAdj", "Best_ss_ES"), 
+    sep=",")
 
     # Add new features to data frame for outputting
     # Features are described below
@@ -574,8 +590,9 @@ collapseFunc <- function(file) {
 Okay - now let's run that function and do the summarization:
 
 ```{r, warning=FALSE, message=FALSE, results='hide'}
-future.apply::future_lapply(file.path(extdata,c(annots)),
-        function(i) {collapseFunc(i)})
+#future.apply::future_lapply(file.path(extdata,c(annots)),
+#        function(i) {collapseFunc(i)})
+collapseFunc(file.path(extdata,annots))
 ```
 
 Now let's read in those newly summarized results and have a look:
@@ -583,27 +600,26 @@ Now let's read in those newly summarized results and have a look:
 ```{r}
 # Read in merged files to investigate on a per-feature level
 collapsed <- dir(extdata,pattern="*.collapse.txt$")
-collapsed <- file.path(extdata,c(collapsed))
-allCollapsed <- dplyr::bind_rows(lapply(collapsed, data.table::fread))
+collapsed <- file.path(extdata,collapsed)
+#allCollapsed <- dplyr::bind_rows(lapply(collapsed, data.table::fread))
+allCollapsed <- data.table::fread(collapsed) #GARRETT: remove DT?
 
 # Select the feature with the lowest individual p-value
 subset(allCollapsed, Best_ss_pAdj == min(allAnnot$pAdj))
 ```
 
-You can see that the outlier site from earlier isn't alone - multiple other 
-sites are affected in the same region.  In fact, in that LTB4R promoter 76% of 
-the CpG sites we have data for are called significant by Borealis!  That's 35 
-CpG sites and all are called hypermethylated.  This could be a very relevant 
-finding.  Maybe you can now used the code provided to look at the data in
-different ways.  What other genes overlap this region?  What features are 
-affected for each?
+You can see that the outlier site from earlier isn't alone - multiple other
+sites are affected in the same region. In fact, in that LTB4R promoter 76% of
+the CpG sites we have data for are called significant by Borealis! That's 35 CpG
+sites and all are called hypermethylated. This could be a very relevant finding.
+Maybe you can now used the code provided to look at the data in different ways.
+What other genes overlap this region? What features are affected for each?
 
-Thank you for trying Borealis and for working through this vignette.  We hope
-it was helpful.  This is as far as we will go but hopefully you have all you 
-need to expand the analysis and apply it to your own data!
+Thank you for trying Borealis and for working through this vignette. We hope it
+was helpful. This is as far as we will go but hopefully you have all you need to
+expand the analysis and apply it to your own data!
 
 Good luck!
-
 
 # Session info {.unnumbered}
 
