@@ -19,6 +19,9 @@ editor_options:
   markdown: 
     wrap: 80
 ---
+```{r, echo=FALSE}
+options(digits=3)
+```
 
 # Introduction
 
@@ -94,10 +97,9 @@ borealis_in <- dir(extdata,pattern="*DMLs.tsv")
 
 ```
 
-Now let's quickly see what files we have generated:
-
+Now let's quickly make sure we generated one output per sample:
 ```{r}
-print(borealis_in)
+length(borealis_in)
 ```
 
 Looks good? Let's continue!
@@ -117,8 +119,10 @@ for each:
 for (file in borealis_in) {
     name <- file
     name <- sub("_DMLs.tsv", "", name)
-    assign(name, read.table(file.path(extdata,file), header=TRUE,
-        stringsAsFactors=FALSE))
+    assign(name, GenomicRanges::makeGRangesFromDataFrame(
+        read.table(file.path(extdata,file), header=TRUE,
+        stringsAsFactors=FALSE), start.field="pos", end.field="pos.1", 
+        seqnames.field="chr", keep.extra.columns=TRUE))
 }
 
 # Create a list of the newly created dataframes
@@ -136,7 +140,9 @@ Looks good - now let's have a look at one file to get familiar with the fields
 of data:
 
 ```{r}
-head(list_DataFrame[[1]])
+#head(list_DataFrame[[1]])
+#t(list_DataFrame[[1]][1,])
+list_DataFrame[[1]]
 ```
 
 Okay - now let's start summarizing some of this information across samples.
@@ -155,8 +161,8 @@ specific fashion depending on their analysis.
 # Add sample ID and a corrected p-value to each and output as new files (.padj)
 for (i in seq_along(list_DataFrame)) {
     sample=sub("_chr.*", "", list_object_names[i])
-    list_DataFrame[[i]]$sampleID=sample
-    list_DataFrame[[i]]$pAdj=p.adjust( list_DataFrame[[i]]$pVal, method="BH")
+    list_DataFrame[[i]]$sampleID <- sample
+    list_DataFrame[[i]]$pAdj <- p.adjust( list_DataFrame[[i]]$pVal, method="BH")
     filepath <- file.path(extdata,paste(list_object_names[i],'.padj',sep=""))
     colnames(list_DataFrame[[i]])[1] <- "#chr"
     write.table(list_DataFrame[[i]], file=filepath, quote=FALSE,sep='\t',
@@ -432,39 +438,6 @@ Now we will create functions to do the summarization. You can use this as-is or
 can easily customize it to create summary metrics specific to your application.
 
 ```{r}
-# Function to calculate per feature metrics in parallel
-perFeatFunc <- function(annot_id,pvals,padjThresh=0.05){
-    ss <- subset(pvals, annot.id == annot_id)
-    sshypo <- subset(ss, isHypo == "TRUE")
-    ssnohypo <- subset(ss, isHypo == "FALSE")
-    ssna <- subset(ss, is.na(isHypo))
-    df <- length(ss$pAdj)*2
-    dfhypo <- length(sshypo$pAdj)*2
-    dfnohypo <- length(ssnohypo$pAdj)*2
-    pout <- pchisq(-2*sum(log(c(ss$pAdj))),df,lower.tail=FALSE)
-    pouthypo <- pchisq(-2*sum(log(c(sshypo$pAdj))),dfhypo,lower.tail=FALSE)
-    poutnohypo <- pchisq(-2*sum(log(c(ssnohypo$pAdj))),
-            dfnohypo,lower.tail=FALSE)
-    medeshypo <- median(c(sshypo$effSize))
-    medesnohypo <- median(c(ssnohypo$effSize))
-    ishypo <- length(ss$isHypo[which(ss$isHypo == "TRUE" & 
-            ss$pAdj <= padjThresh)])
-    ishypoAll <- length(ss$isHypo[which(ss$isHypo == "TRUE")])
-    ishyper <- length(ss$isHypo[which(ss$isHypo == "FALSE" &
-            ss$pAdj <= padjThresh)])
-    ishyperAll <- length(ss$isHypo[which(ss$isHypo == "FALSE")])
-    isNa <- length(ss$isHypo[which(is.na(ss$isHypo))])
-    bestPval <- min(ss$pAdj)
-    minEs <- min(ss$effSize)
-    maxEs <- max(ss$effSize)
-    bestEs <- ifelse(abs(maxEs) > abs(minEs), maxEs, minEs)
-
-    combout <- paste(ishypo, ishypoAll, ishyper, ishyperAll, isNa,
-    pout, pouthypo, medeshypo, poutnohypo, medesnohypo, bestPval,
-    bestEs, sep=",")
-
-    return(combout)
-}
 
 collapseFunc <- function(input,padjThresh=0.05) {
     # Calculate how may CpGs per annotatr feature and store in dataframe
@@ -483,13 +456,9 @@ collapseFunc <- function(input,padjThresh=0.05) {
         by.y="annot.id", all.x=TRUE)
     } else {featurecnts$signifCount <- 0}
 
-    # Calculate a range of summary metrics per feature
     # What fraction of sites per feature pass p-value threshold?
     featurecnts$fractionSignif <- featurecnts$signifCount/featurecnts$NoSites
 
-    # Create a new variable for storing a p-value combined across
-    # all sites in a feature (Fisher's)
-    featurecnts$newPVAL <- NA
 
     # Create some intermediate tables to facilitate calculations
     locations <- subset(input, select=c("annot.id", "annot.seqnames",
@@ -502,57 +471,8 @@ collapseFunc <- function(input,padjThresh=0.05) {
     colnames(genemap) <- c("annot.symbol", "annot.id", "annot.tx_id", 
         "annot.width","SampleID")
     genemap <- unique(genemap)
-    pvals <- as.data.frame(cbind(input$annot.id, input$pAdj, input$isHypo,
-    input$effSize))
-    colnames(pvals) <- c("annot.id", "pAdj", "isHypo", "effSize")
-    pvals$pAdj <- (as.numeric(as.character(pvals$pAdj)))
-    pvals$effSize <- (as.numeric(as.character(pvals$effSize)))
+    
 
-    return(featureCountsEnhancement(featurecnts,genemap,pvals))
-}
-
-featureCountsEnhancement <- function(featurecnts,genemap,pvals){
-    newPvals <- lapply(seq_along(featurecnts$annot.id), 
-                    function(i) {perFeatFunc(featurecnts$annot.id[i],pvals)})
-
-    # Break apart data output by parallel annotation
-    newPvals <- as.vector(newPvals)
-    newPvals <- unlist(newPvals)
-    newPvals <- as.data.frame(newPvals)
-    newPvals <- tidyr::separate(newPvals, newPvals, into=c("isHypoSig", 
-    "isHypoAll","isHyperSig", "isHyperAll", "isNA", "pAdj", "pAdjHypo", 
-    "MedESHypo","pAdjHyper", "MedESHyper", "Best_ss_pAdj", "Best_ss_ES"), 
-    sep=",")
-
-    # Add new features to data frame for outputting
-    # Features are described below
-
-    # How many sites are hypomethylated and significant?
-    featurecnts$isHypoSig <- newPvals$isHypoSig
-    # How many sites are hypomethylated regardless of p-value?
-    featurecnts$isHypoAll <- newPvals$isHypoAll
-    # How many sites are hypermethylated and significant?
-    featurecnts$isHyperSig <- newPvals$isHyperSig
-    # How many sites are hypermethylated regardless of p-value?
-    featurecnts$isHyperAll <- newPvals$isHyperAll
-    # How many sites are NA i.e. no direction of change called?
-    featurecnts$isNA <- newPvals$isNA
-    # New combined p-value
-    featurecnts$newPVAL <- newPvals$pAdj
-    # Combined p-value for sites called hypomethylated only
-    featurecnts$newPVALHypo <- newPvals$pAdjHypo
-    # Median effect size for sites called hypomethylated
-    featurecnts$MedESHypo <- newPvals$MedESHypo
-    # Combined p-value for sites called hypermethylated only
-    featurecnts$newPVALHyper <- newPvals$pAdjHyper
-    # Median effect size for sites called hypermethylated
-    featurecnts$MedESHyper <- newPvals$MedESHyper
-    # Best single-site p-value in the feature
-    featurecnts$Best_ss_pAdj <- newPvals$Best_ss_pAdj
-    # Most extreme effect size in the feature
-    featurecnts$Best_ss_ES <- newPvals$Best_ss_ES
-
-    # Merge with intermediate data and output final file
     summarized <- merge(featurecnts, genemap, by.x="annot.id", by.y="annot.id")
     summarized$signifCount[is.na(summarized$signifCount)] <- 0
     summarized$fractionSignif[is.na(summarized$fractionSignif)] <- 0
@@ -570,8 +490,12 @@ allCollapsed <- collapseFunc(allAnnot)
 Now let's have a look:
 
 ```{r}
-# Select the feature with the lowest individual p-value
-subset(allCollapsed, Best_ss_pAdj == min(allAnnot$pAdj))
+# Select the LTB4R promoter region
+head(allCollapsed)
+subset(allCollapsed, select=c(SampleID, annot.symbol, NoSites, fractionSignif),
+    SampleID=="vignette_borealis_patient_72" & annot.symbol=="LTB4R" & 
+    grepl("promoter", annot.id))
+    
 ```
 
 You can see that the outlier site from earlier isn't alone - multiple other
