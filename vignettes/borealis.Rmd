@@ -75,54 +75,49 @@ Changelogs for development releases will be detailed on GitHub releases.
 
 Now let's load the test data included with Borealis. This represents a specific
 region from chromosome 14 (hg19) for 20 of the 94 individuals described in the
-Borealis publication.
+Borealis publication. The entire Borealis pipeline can be run with the single
+`runBorealis` command.
 
 ```{r, message=FALSE, warning=FALSE}
-require("borealis")
+library("borealis")
 
 # Set data location 
 extdata <- system.file("extdata","bismark", package="borealis")
 
-
 # Run borealis
-results <- runBorealis(extdata,nThreads=2, chrs="chr14",
-    suffix=".gz",
-    outprefix=file.path(extdata,"vignette_borealis_"), 
-    modelOutPrefix=file.path(extdata,"vignette_CpG_model"))
-
-
-
-# Read in the name of all files for analysis
-borealis_in <- dir(extdata,pattern="*DMLs.tsv")
-
+results <- runBorealis(extdata,nThreads=2, chrs="chr14", suffix=".gz",
+                        outprefix=file.path(extdata,"vignette_borealis_"), 
+                        modelOutPrefix=file.path(extdata,"vignette_CpG_model"))
 ```
 
 Now let's quickly make sure we generated one output per sample:
 ```{r}
+# Read in the name of all files for analysis
+borealis_in <- dir(extdata,pattern="*DMLs.tsv")
 length(borealis_in)
 ```
 
 Looks good? Let's continue!
 
-# Basic processing of Borealis data
+# Basic post-processing and analysis of Borealis results
 
+## Read in entire cohort's results 
 Now you should have successfully loaded the provided methylation data, run
 Borealis and created a list of its output files.
 
 Let's now have a look at the data and generate some summary metrics.
 
-First we'll read in the data for each of the 20 patients and create dataframes
+First we'll read in the data for each of the 20 patients and create GRanges
 for each:
 
 ```{r, message=FALSE, warning=FALSE}
 # Read in list of Borealis output files and create a dataframe for each
 for (file in borealis_in) {
-    name <- file
-    name <- sub("_DMLs.tsv", "", name)
+    name <- sub("_DMLs.tsv", "", file)
     assign(name,GenomicRanges::makeGRangesFromDataFrame(
-        read.table(file.path(extdata,file), header=TRUE,
-        stringsAsFactors=FALSE), start.field="pos", end.field="pos.1", 
-        seqnames.field="chr", keep.extra.columns=TRUE))
+                read.table(file.path(extdata,file), header=TRUE,
+                stringsAsFactors=FALSE), start.field="pos", end.field="pos.1", 
+                seqnames.field="chr", keep.extra.columns=TRUE))
 }
 
 # Create a list of the newly created dataframes
@@ -160,13 +155,14 @@ Okay - now let's start summarizing some of this information across samples.
 
 ## Generating summary metrics across all samples
 
-First we will add two new columns to each data frame. One column will be the
+First we will add two new columns to each GRange. One column will be the
 sample ID for each patient, to enable us to distinguish between results later.
-The second will contain a corrected p-value for each CpG site per-patient.
+The second will contain p-values adjusted for multiple comparisons at each CpG 
+site per-patient.
 
 We decouple the generation of adjusted p-values from the main package since
-users may wish to use uncorrected p-values or generate corrected p-values in a
-specific fashion depending on their analysis.
+users may wish to use uncorrected p-values or generate adjusted p-values in a
+specific fashion depending on their analysis. 
 
 ```{r}
 # Add sample ID and a corrected p-value to each and output as new files (.padj)
@@ -174,11 +170,10 @@ for (i in seq_along(listGRanges)) {
     sample=sub("_chr.*", "", list_object_names[i])
     listGRanges[[i]]$sampleID <- sample
     listGRanges[[i]]$pAdj <- p.adjust( listGRanges[[i]]$pVal, method="BH")
-    filepath <- file.path(extdata,paste(list_object_names[i],'.padj',sep=""))
 }
 ```
 
-Let's have a look to see those newly added columns:
+Let's have a look at the first entry to see those newly added columns:
 
 ```{r}
 listGRanges[[1]][1,]
@@ -191,10 +186,7 @@ generate our summary metrics.
 
 ```{r}
 # Create a single dataframe with data for all samples
-combined_files <- listGRanges[[1]]
-for (i in 2:length(listGRanges)) {
-    combined_files <- c(combined_files, listGRanges[[i]])
-}
+combined_files <- Reduce(c,listGRanges)
 ```
 
 ### How many CpG sites worth of data do we have across all samples combined?
@@ -209,7 +201,7 @@ Lets create a table to summarize useful metrics about the CpG sites
 ```{r}
 # Create table of unique positions and mu/theta values
 mu_theta <- unique(subset(as.data.frame(combined_files), 
-    select=-c(x,n,pVal, isHypo, pAdj, effSize, sampleID)))
+                    select=-c(x,n,pVal, isHypo, pAdj, effSize, sampleID)))
 ```
 
 ### How many unique samples and unique CpG sites are we analyzing data from?
@@ -286,7 +278,7 @@ signif_counts <- dplyr::count(as.data.frame(signif_only),sampleID)
 
 # Calculate the percentiles of the number of significant sites
 sig_quantiles <- quantile(signif_counts$n,
-    probs=c(0.025, 0.05, 0.95, 0.975, 0.999))
+                            probs=c(0.025, 0.05, 0.95, 0.975, 0.999))
 
 # Check if nay patients are above the 99.9th percentile
 subset(signif_counts, n >= sig_quantiles["99.9%"])
@@ -311,7 +303,7 @@ epigenetic features they reside in. We provide an example of how to do so in the
 following section. We will do this for the single sample containing the most
 significant CpG site for the sake of brevity in the vignette.
 
-# Annotating outputs with epigenetic features
+## Annotating outputs with epigenetic features
 
 In this section we will add further biological context to our results by
 annotating epigenetically relevant features. We will use the
@@ -371,15 +363,14 @@ to control of gene expression.
 
 Let's use a handy Borealis plotting function to investigate this site further.
 
-```{r sg, fig.wide=TRUE, fig.cap="plotCpGsite function", echo=FALSE}
+```{r sg, fig.wide=TRUE, fig.cap="plotCpGsite function demo"}
 # Use Borealis plotting function to investigate this site further
-plotCpGsite("chr14:24780288",
-    sampleOfInterest="patient_72",
-    modelFile=file.path(extdata,"vignette_CpG_model_chr14.csv"),
-    methCountFile=file.path(extdata,
-        "vignette_CpG_model_rawMethCount_chr14.tsv"),
-    totalCountFile=file.path(extdata,
-        "vignette_CpG_model_rawTotalCount_chr14.tsv"))
+plotCpGsite("chr14:24780288", sampleOfInterest="patient_72",
+            modelFile=file.path(extdata,"vignette_CpG_model_chr14.csv"),
+            methCountFile=file.path(extdata,
+                                "vignette_CpG_model_rawMethCount_chr14.tsv"),
+            totalCountFile=file.path(extdata,
+                                "vignette_CpG_model_rawTotalCount_chr14.tsv"))
 ```
 
 The graph above shows us the expected methylation profile under our model, and
@@ -393,7 +384,7 @@ to summarize all our data across epigenetic features.
 
 That's what we will do next.
 
-# Summarizing single-site data across epigenetic features
+## Summarizing single-site data across epigenetic features
 
 First lets set a p-value we will use to determine significance in our 
 feature-summarized data. In our summarization we will make
@@ -401,7 +392,7 @@ use of corrected p-values and ignore uncorrected p-values. Your analysis can
 optionally use an alternative approach.
 
 ```{r}
-padjThresh=0.05
+padjThresh <- 0.05
 ```
 
 Okay - now let's do the summarization.  You can use this code as-is or easily 
@@ -411,7 +402,7 @@ customize it to create summary metrics specific to your application.
 
 ```{r}
 # Calculate how may CpGs per annotatr feature and store in dataframe
-allAnnot<-as.data.frame(allAnnot)
+allAnnot <- as.data.frame(allAnnot)
 featureids <- allAnnot$annot.id
 featurecnts <- as.data.frame(table(featureids))
 colnames(featurecnts) <- c("annot.id", "NoSites")
@@ -424,20 +415,18 @@ head(featurecnts)
 ```
 
 Okay, now we want to figure out how many of the CpGs in each feature have a 
-significant corrected p-value, meaning they appear abnormal.  We will subset the 
+significant corrected p-value, meaning they appear abnormal.  We will subset the
 sample data on the basic of the p-value and create counts,
 
 ```{r}
 # Calculate how many sites per feature pass p-value threshold
 # Add data to new summary dataframe
 signifonly <- subset(allAnnot, pAdj<=padjThresh)
-if (nrow(signifonly) > 0) {
-    signifonly <- signifonly$annot.id
-    signifonlycnt <- as.data.frame(table(signifonly))
-    colnames(signifonlycnt) <- c("annot.id", "signifCount")
-    featurecnts <- merge(featurecnts, signifonlycnt, by.x="annot.id",
-    by.y="annot.id", all.x=TRUE)
-} else {featurecnts$signifCount <- 0}
+signifonly <- signifonly$annot.id
+signifonlycnt <- as.data.frame(table(signifonly))
+colnames(signifonlycnt) <- c("annot.id", "signifCount")
+featurecnts <- merge(featurecnts, signifonlycnt, by.x="annot.id", 
+                        by.y="annot.id", all.x=TRUE)
 ```
 
 Now for convenience let's figure out what fraction of sites in each feature 
@@ -452,31 +441,25 @@ And finally lets merge the new and orignal data for output:
 ```{r}
 # Let's combine the data for final output
 locations <- subset(allAnnot, select=c("annot.id", "annot.seqnames",
-    "annot.start", "annot.end"))
-locations <- unique(locations)
-featurecnts <- merge(locations, featurecnts, by.x="annot.id", 
-    by.y="annot.id")
-genemap <- cbind(allAnnot$annot.symbol, allAnnot$annot.id, allAnnot$annot.tx_id,
-    allAnnot$annot.width, allAnnot$sampleID)
-colnames(genemap) <- c("annot.symbol", "annot.id", "annot.tx_id", 
-    "annot.width", "SampleID")
-genemap <- unique(genemap)
+                                        "annot.start", "annot.end"))
+featurecnts <- merge(unique(locations), featurecnts, by="annot.id")
+genemap <- unique(cbind(allAnnot$annot.symbol, allAnnot$annot.id, 
+                        allAnnot$annot.tx_id,allAnnot$annot.width, 
+                        allAnnot$sampleID))
+colnames(genemap) <- c("annot.symbol", "annot.id", "annot.tx_id", "annot.width",
+                        "SampleID")
     
-summarized <- merge(featurecnts, genemap, by.x="annot.id", by.y="annot.id")
+summarized <- merge(featurecnts, genemap, by="annot.id")
 summarized$signifCount[is.na(summarized$signifCount)] <- 0
 summarized$fractionSignif[is.na(summarized$fractionSignif)] <- 0
-
 ```
-
-
 
 Now let's have a look at that promoter region!
 
 ```{r}
 # Select the LTB4R promoter region
 subset(summarized, select=c(annot.symbol, NoSites, signifCount, fractionSignif),
-    annot.symbol=="LTB4R" & 
-    grepl("promoter", annot.id))
+        (annot.symbol=="LTB4R" & grepl("promoter", annot.id)))
 ```
 
 You can see that the outlier site from earlier isn't alone - multiple other
