@@ -61,6 +61,6 @@ results <- runBorealis(extdata,nThreads=2,chrs="chr14",suffix=".gz",
                         modelOutPrefix = file.path(outdir,"CpG_model"))
 }
 \value{
-Returns an object of "SeqCountSet" class with raw dataset loaded and used for
+Returns an object of "BSseq" class with raw dataset loaded and used for
 modeling purposes.
 }

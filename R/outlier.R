@@ -13,13 +13,15 @@ runBorealis <- function(inDir,
 
     # read in raw data and store matrix versions to disk
     BSobj <- loadBismarkData(inDir,suffix,chrs)
-    write.table(cbind(chr=as.vector(BSobj$chr,mode="character"),
-                        start=BSobj$pos,end=BSobj$pos+1,BSobj$x),
+    chr <- as.vector(seqnames(BSobj), mode="character")
+    pos <- start(BSobj)
+    x <- as.array(getCoverage(BSobj, type="M"))
+    n <- as.array(getCoverage(BSobj, type="Cov"))
+    write.table(cbind(chr=chr,start=pos,end=pos+1,x),
                     file=paste0(modelOutPrefix,"_rawMethCount_",
                                 paste(chrs,collapse="_"),".tsv"),
                     row.names=FALSE,quote=FALSE,sep="\t")
-    write.table(cbind(chr=as.vector(BSobj$chr,mode="character"),
-                        start=BSobj$pos,end=BSobj$pos+1,BSobj$n),
+    write.table(cbind(chr=chr,start=pos,end=pos+1,n),
                     file=paste0(modelOutPrefix,"_rawTotalCount_",
                                 paste(chrs,collapse="_"),".tsv"),
                     row.names=FALSE,quote=FALSE,sep="\t")
@@ -62,22 +64,20 @@ loadBismarkData <- function(inDir,suffix,chrs){
         tmp[tmp$chr %in% chrs,]
     }
     BSobj <- DSS::makeBSseqData(dataList,samples)
-    BSobj <- list(  chr=seqnames(BSobj),
-                    pos=start(BSobj),
-                    x=as.array(getCoverage(BSobj, type="M")),
-                    n=as.array(getCoverage(BSobj, type="Cov")))
 }
 
 # Function to build the beta-binomial models for each CpG using the data from
 # the entire cohort.
 buildModels <- function(BSobj,nThreads,minDepth=4,minSamps=5,
                         timeout=10,laplaceSmooth=TRUE) {
+
     ## grab counts
-    keepInd <- rowSums(BSobj$n>=minDepth)>=minSamps
-    x <- BSobj$x[keepInd,]
-    n <- BSobj$n[keepInd,]
+    n <- as.array(getCoverage(BSobj, type="Cov"))
+    keepInd <- rowSums(n>=minDepth)>=minSamps
+    x <- as.array(getCoverage(BSobj, type="M"))[keepInd,]
+    n <- n[keepInd,]
     chr <- as.vector(BSobj$chr,mode="character")[keepInd]
-    pos <- BSobj$pos[keepInd]
+    pos <- as.array(getCoverage(BSobj, type="Cov"))[keepInd]
     rm(list="BSobj")
 
     niter <- nrow(x)
@@ -114,8 +114,6 @@ buildModels <- function(BSobj,nThreads,minDepth=4,minSamps=5,
     ## create result and sort by position
     df <- na.omit(df)
     df <- df[with(df, order(chr,pos)), ]
-
-    return(df)
 }
 
 # Helper function for model building at each CpG site
@@ -148,17 +146,18 @@ fitGamlss <- function(x1,n1,minDepth,laplaceSmooth,timeout){
 # Helper function to write the results for each individual in cohort after model
 # has been built.
 writeResults <- function(BSobj,modelDF,outprefix,chrs,minObsDepth=10){
-
-    nreps1 <- ncol(BSobj$x)
-    repNames <- colnames(BSobj$x)
+    # pull out data elements
+    chr <- as.vector(seqnames(BSobj), mode="character")
+    pos <- start(BSobj)
+    x <- as.array(getCoverage(BSobj, type="M"))
+    n <- as.array(getCoverage(BSobj, type="Cov"))
+    rm(list="BSobj")
 
     message("Writing results for each sample to file.")
-    result <- foreach(rep=seq_len(nreps1), .combine=c,
-                        .errorhandling = "remove",.multicombine=TRUE) %dopar% {
-        df <- data.frame(chr=as.vector(BSobj$chr,mode="character"),
-                            pos=BSobj$pos,
-                            x = as.integer(BSobj$x[,rep]),
-                            n=as.integer(BSobj$n[,rep]))
+    result <- foreach(rep=seq_len(ncol(x)), .combine=c,
+                        .errorhandling="remove",.multicombine=TRUE) %dopar% {
+        df <- data.frame(chr=chr,pos=pos,x=as.integer(x[,rep]),
+                            n=as.integer(n[,rep]))
 
         df <- df[df$n>=minObsDepth,]
         df <- na.omit(plyr::join(df,modelDF,by=c("chr","pos"),type="inner"))
@@ -167,7 +166,7 @@ writeResults <- function(BSobj,modelDF,outprefix,chrs,minObsDepth=10){
 
         # write sorted table
         write.table(df[order(df$pVal),c(1,2,2,3:length(df))],
-                        file=paste0(outprefix,repNames[rep],"_",
+                        file=paste0(outprefix,colnames(x)[rep],"_",
                         paste(chrs,collapse="_"),"_DMLs.tsv"),
                         quote=FALSE,row.names=FALSE,sep="\t")
 
