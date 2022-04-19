@@ -74,26 +74,26 @@ Changelogs for development releases will be detailed on GitHub releases.
 # Running Borealis
 
 Now let's load the test data included with Borealis. This represents a specific
-region from chromosome 14 (hg19) for 20 of the 94 individuals described in the
-Borealis publication. The entire Borealis pipeline can be run with the single
-`runBorealis` command.
+region from chromosome 14 (hg19) for 20 individuals with undiagnosed rare disease. 
+The entire Borealis pipeline can be run with the single `runBorealis` command.
 
 ```{r, message=FALSE, warning=FALSE}
 library("borealis")
 
-# Set data location 
+# Set data locations
+outdir <- tempdir()
 extdata <- system.file("extdata","bismark", package="borealis")
 
 # Run borealis
 results <- runBorealis(extdata,nThreads=2, chrs="chr14", suffix=".gz",
-                        outprefix=file.path(extdata,"vignette_borealis_"), 
-                        modelOutPrefix=file.path(extdata,"vignette_CpG_model"))
+                        outprefix=file.path(outdir,"vignette_borealis_"), 
+                        modelOutPrefix=file.path(outdir,"vignette_CpG_model"))
 ```
 
 Now let's quickly make sure we generated one output per sample:
 ```{r}
 # Read in the name of all files for analysis
-borealis_in <- dir(extdata,pattern="*DMLs.tsv")
+borealis_in <- dir(outdir,pattern="*DMLs.tsv")
 length(borealis_in)
 ```
 
@@ -115,7 +115,7 @@ for each:
 for (file in borealis_in) {
     name <- sub("_DMLs.tsv", "", file)
     assign(name,GenomicRanges::makeGRangesFromDataFrame(
-                read.table(file.path(extdata,file), header=TRUE,
+                read.table(file.path(outdir,file), header=TRUE,
                 stringsAsFactors=FALSE), start.field="pos", end.field="pos.1", 
                 seqnames.field="chr", keep.extra.columns=TRUE))
 }
@@ -366,10 +366,10 @@ Let's use a handy Borealis plotting function to investigate this site further.
 ```{r sg, fig.wide=TRUE, fig.cap="plotCpGsite function demo"}
 # Use Borealis plotting function to investigate this site further
 plotCpGsite("chr14:24780288", sampleOfInterest="patient_72",
-            modelFile=file.path(extdata,"vignette_CpG_model_chr14.csv"),
-            methCountFile=file.path(extdata,
+            modelFile=file.path(outdir,"vignette_CpG_model_chr14.csv"),
+            methCountFile=file.path(outdir,
                                 "vignette_CpG_model_rawMethCount_chr14.tsv"),
-            totalCountFile=file.path(extdata,
+            totalCountFile=file.path(outdir,
                                 "vignette_CpG_model_rawTotalCount_chr14.tsv"))
 ```
 
