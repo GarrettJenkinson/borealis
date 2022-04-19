@@ -55,29 +55,10 @@ summary statistics for each sample in the cohort at each CpG site.
 }
 \examples{
 extdata <- system.file("extdata","bismark", package="borealis")
-results <- runBorealis(extdata,nThreads=2,chrs="chr14",suffix=".gz")
-file.remove(c('CpG_model_chr14.csv', 'CpG_model_rawMethCount_chr14.tsv',
-    'CpG_model_rawTotalCount_chr14.tsv',
-    'borealis_patient_70_chr14_DMLs.tsv',
-    'borealis_patient_71_chr14_DMLs.tsv',
-    'borealis_patient_72_chr14_DMLs.tsv',
-    'borealis_patient_73_chr14_DMLs.tsv',
-    'borealis_patient_74_chr14_DMLs.tsv',
-    'borealis_patient_75_chr14_DMLs.tsv',
-    'borealis_patient_76_chr14_DMLs.tsv',
-    'borealis_patient_77_chr14_DMLs.tsv',
-    'borealis_patient_78_chr14_DMLs.tsv',
-    'borealis_patient_79_chr14_DMLs.tsv',
-    'borealis_patient_7_chr14_DMLs.tsv',
-    'borealis_patient_80_chr14_DMLs.tsv',
-    'borealis_patient_81_chr14_DMLs.tsv',
-    'borealis_patient_82_chr14_DMLs.tsv',
-    'borealis_patient_83_chr14_DMLs.tsv',
-    'borealis_patient_84_chr14_DMLs.tsv',
-    'borealis_patient_85_chr14_DMLs.tsv',
-    'borealis_patient_86_chr14_DMLs.tsv',
-    'borealis_patient_87_chr14_DMLs.tsv',
-    'borealis_patient_8_chr14_DMLs.tsv'))
+outdir <- tempdir()
+results <- runBorealis(extdata,nThreads=2,chrs="chr14",suffix=".gz",
+                        outprefix = file.path(outdir,"borealis_"),
+                        modelOutPrefix = file.path(outdir,"CpG_model"))
 }
 \value{
 Returns an object of "SeqCountSet" class with raw dataset loaded and used for
