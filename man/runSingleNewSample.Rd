@@ -34,5 +34,5 @@ df <- runSingleNewSample(file.path(extdata,'bismark','patient_72',
                             modelFile=file.path(extdata,'CpG_model_chr14.csv'))
 }
 \value{
-Returns a \code{data.frame} with modeling results.
+Returns a \code{GRanges} object with modeling results.
 }

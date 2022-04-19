@@ -218,10 +218,11 @@ runSingleNewSample <- function(inFile,outFile,minObsDepth=10,
 
     # write sorted table
     df <- df[order(df$pVal),c(1,2,2,3:length(df))]
+    names(df)[2:3] <- c("start","end")
     if(!is.null(outFile)){
         write.table(df,file=outFile,quote=FALSE,row.names=FALSE,sep="\t")
     }
-    return(df)
+    return(as(df,"GRanges"))
 }
 
 plotCpGsite <- function(cpgSites, sampleOfInterest=NA,
