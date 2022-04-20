@@ -74,7 +74,9 @@ Changelogs for development releases will be detailed on GitHub releases.
 # Running Borealis
 
 Now let's load the test data included with Borealis. This represents a specific
-region from chromosome 14 (hg19) for 20 individuals with undiagnosed rare disease. 
+region from chromosome 14 (hg19) for 20 individuals with undiagnosed rare 
+disease. 
+
 The entire Borealis pipeline can be run with the single `runBorealis` command.
 
 ```{r, message=FALSE, warning=FALSE}

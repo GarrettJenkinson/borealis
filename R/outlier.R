@@ -76,8 +76,8 @@ buildModels <- function(BSobj,nThreads,minDepth=4,minSamps=5,
     keepInd <- rowSums(n>=minDepth)>=minSamps
     x <- as.array(getCoverage(BSobj, type="M"))[keepInd,]
     n <- n[keepInd,]
-    chr <- as.vector(BSobj$chr,mode="character")[keepInd]
-    pos <- as.array(getCoverage(BSobj, type="Cov"))[keepInd]
+    chr <- as.vector(seqnames(BSobj),mode="character")[keepInd]
+    pos <- start(BSobj)[keepInd]
     rm(list="BSobj")
 
     niter <- nrow(x)

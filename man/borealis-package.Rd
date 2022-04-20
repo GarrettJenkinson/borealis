@@ -3,7 +3,7 @@
 \alias{borealis-package}
 \docType{package}
 \title{
-  Bisulfite-seq OutlieR mEthylation At singLe-sIte reSolution
+    Bisulfite-seq OutlieR mEthylation At singLe-sIte reSolution
 }
 \description{
     Borealis is an R package performing outlier analysis for
@@ -13,10 +13,10 @@
     can be useful for rare disease diagnoses.
 }
 \details{
-  See \code{packageDescription('borealis')}
+    See \code{packageDescription('borealis')}
 }
 \author{
-  Maintainer: Garrett Jenkinson <gargar934@gmail.com>
+    Maintainer: Garrett Jenkinson <gargar934@gmail.com>
 }
 \keyword{package}
 

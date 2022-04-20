@@ -29,7 +29,7 @@ predict using previously estimated model specified by \code{modelFile}.
 \examples{
 extdata <- system.file("extdata", package="borealis")
 outdir <- tempdir()
-df <- runSingleNewSample(file.path(extdata,'bismark','patient_72',
+gr <- runSingleNewSample(file.path(extdata,'bismark','patient_72',
                             'patient_72.gz'),file.path(outdir,'output.txt'),
                             modelFile=file.path(extdata,'CpG_model_chr14.csv'))
 }

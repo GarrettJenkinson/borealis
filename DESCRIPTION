@@ -1,7 +1,7 @@
 Package: borealis
 Type: Package
 Title: Bisulfite-seq OutlieR mEthylation At singLe-sIte reSolution
-Version: 0.99.2
+Version: 0.99.3
 Authors@R: person(given = "Garrett",
             family = "Jenkinson",
             role = c("aut", "cre"),
@@ -19,6 +19,6 @@ Description: Borealis is an R library performing outlier analysis for
 License: GPL-3
 Encoding: UTF-8
 Suggests: BiocStyle, knitr, rmarkdown, RUnit, BiocGenerics, annotatr, tidyr, 
-    TxDb.Hsapiens.UCSC.hg19.knownGene, org.Hs.eg.db, GenomicRanges
+    TxDb.Hsapiens.UCSC.hg19.knownGene, org.Hs.eg.db
 VignetteBuilder: knitr
 biocViews: Sequencing, Coverage, DNAMethylation, DifferentialMethylation
