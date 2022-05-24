@@ -9,6 +9,7 @@ author:
 - name: Eric Klee
   affiliation: Mayo Clinic
 package: borealis
+bibliography: borealis.bib
 output:
     BiocStyle::html_document
 vignette: |
@@ -47,6 +48,10 @@ learning basic functionality, creating summary metrics and looking for outlier
 samples, users will optionally learn how to annotate CpGs with epigenetic
 feature context using `r Biocpkg("annotatr")`. Finally users will learn how to
 summarize CpG data across epigenetic features.
+
+## Citation
+
+If you use borealis in your research, please cite @borealis.
 
 # Installation
 

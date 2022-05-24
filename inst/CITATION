@@ -1,0 +1,10 @@
+citEntry(entry="article",
+         title = "Detection of outlier methylation from bisulfite sequencing data with novel Bioconductor package BOREALIS",
+         author = personList( as.person("Gavin R. Oliver"), as.person("Garrett Jenkinson"), as.person("Rory J. Olson"), as.person("Laura E. Shultz-Rogers"), as.person("Eric W. Klee")), 
+         year = 2022,
+         journal = "bioRxiv",
+         doi = "10.1101/2022.05.19.492700",
+         textVersion =
+         paste("Gavin R. Oliver, Garrett Jenkinson, Rory J. Olson, Laura E. Schultz-Rogers, Eric W. Klee (2022):",
+               "Detection of outlier methylation from bisulfite sequencing data with novel Bioconductor package BOREALIS. ", 
+                "bioRxiv. doi:10.1101/2022.05.19.492700" ))
