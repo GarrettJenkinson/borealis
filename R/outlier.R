@@ -8,7 +8,8 @@ runBorealis <- function(inDir,
 
     # get parallel backend ready
     if (nThreads>1){
-        registerDoMC(nThreads)
+        workers <- makeCluster(nThreads, type="SOCK")
+        registerDoParallel(workers)
     }
 
     # read in raw data and store matrix versions to disk
