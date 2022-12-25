@@ -14,10 +14,10 @@ runBorealis <- function(inDir,
 
     # read in raw data and store matrix versions to disk
     BSobj <- loadBismarkData(inDir,suffix,chrs)
-    chr <- as.vector(seqnames(BSobj), mode="character")
-    pos <- start(BSobj)
-    x <- as.array(getCoverage(BSobj, type="M"))
-    n <- as.array(getCoverage(BSobj, type="Cov"))
+    chr <- as.vector(BSobj$chr, mode="character")
+    pos <- BSobj$pos
+    x <- BSobj$M
+    n <- BSobj$Cov
     write.table(cbind(chr=chr,start=pos,end=pos+1,x),
                     file=paste0(modelOutPrefix,"_rawMethCount_",
                                 paste(chrs,collapse="_"),".tsv"),
@@ -64,7 +64,7 @@ loadBismarkData <- function(inDir,suffix,chrs){
         # filter to relevant chromosomes
         tmp[tmp$chr %in% chrs,]
     }
-    BSobj <- DSS::makeBSseqData(dataList,samples)
+    BSobj <- makeBSseqData(dataList,samples)
 }
 
 # Function to build the beta-binomial models for each CpG using the data from
@@ -73,12 +73,15 @@ buildModels <- function(BSobj,nThreads,minDepth=4,minSamps=5,
                         timeout=10,laplaceSmooth=TRUE) {
 
     ## grab counts
-    n <- as.array(getCoverage(BSobj, type="Cov"))
+    chr <- as.vector(BSobj$chr, mode="character")
+    pos <- BSobj$pos
+    x <- BSobj$M
+    n <- BSobj$Cov
     keepInd <- rowSums(n>=minDepth)>=minSamps
-    x <- as.array(getCoverage(BSobj, type="M"))[keepInd,]
+    x <- x[keepInd,]
     n <- n[keepInd,]
-    chr <- as.vector(seqnames(BSobj),mode="character")[keepInd]
-    pos <- start(BSobj)[keepInd]
+    chr <- chr[keepInd]
+    pos <- pos[keepInd]
     rm(list="BSobj")
 
     niter <- nrow(x)
@@ -137,7 +140,9 @@ fitGamlss <- function(x1,n1,minDepth,laplaceSmooth,timeout){
                             family = BB(mu.link = "logit",sigma.link = "log")
                         )$result}, timeout=timeout, onTimeout="silent" )
     if (!is.null(fit)){ # fit will be null if it timed out
-        pred <- predictAll(fit,data=df[1,,drop=FALSE])
+        pred <- list()
+        pred$mu <- predict(fit,what="mu",type="response")
+        pred$sigma <- predict(fit,what="sigma",type="response")
     } else{
         pred <- NULL
     }
@@ -148,10 +153,10 @@ fitGamlss <- function(x1,n1,minDepth,laplaceSmooth,timeout){
 # has been built.
 writeResults <- function(BSobj,modelDF,outprefix,chrs,minObsDepth=10){
     # pull out data elements
-    chr <- as.vector(seqnames(BSobj), mode="character")
-    pos <- start(BSobj)
-    x <- as.array(getCoverage(BSobj, type="M"))
-    n <- as.array(getCoverage(BSobj, type="Cov"))
+    chr <- as.vector(BSobj$chr, mode="character")
+    pos <- BSobj$pos
+    x <- BSobj$M
+    n <- BSobj$Cov
     rm(list="BSobj")
 
     message("Writing results for each sample to file.")
@@ -303,3 +308,67 @@ generatePlot <- function(df,model,sampleOfInterest){
     return(plot_grid(p2,p1,ncol=1,rel_heights = c(1,2),align="v"))
 }
 
+
+# Modified from: https://github.com/haowulab/DSS/blob/master/R/BSseq_util.R
+# we used to just call this function, but something recently broke in 
+# the way BSseq objects work, so we replaced it with a list
+makeBSseqData <- function(dat, sampleNames) {
+    n0 <- length(dat)
+
+    if(missing(sampleNames))
+        sampleNames <- paste("sample", 1:n0, sep="")
+
+    alldat <- dat[[1]]
+    if(any(alldat[,"N"] < alldat[,"X"], na.rm=TRUE))
+        stop("Some methylation counts are greater than coverage.\n")
+
+    ix.X <- which(colnames(alldat) == "X")
+    ix.N <- which(colnames(alldat) == "N")
+    colnames(alldat)[ix.X] <- "X1"
+    colnames(alldat)[ix.N] <- "N1"
+
+    if(n0 > 1) { ## multiple replicates, merge data
+        for(i in 2:n0) {
+            thisdat <- dat[[i]]
+            if(any(thisdat[,"N"] < thisdat[,"X"], na.rm=TRUE))
+                stop("Some methylation counts are greater than coverage.\n")
+
+            ix.X <- which(colnames(thisdat) == "X")
+            ix.N <- which(colnames(thisdat) == "N")
+            colnames(thisdat)[c(ix.X,ix.N)] <- paste(c("X", "N"),i, sep="")
+            alldat <- merge(alldat, thisdat, all=TRUE)
+        }
+    }
+
+    ## make BSseq object
+    ix.X <- grep("X", colnames(alldat))
+    ix.N <- grep("N", colnames(alldat))
+    alldat[is.na(alldat)] <- 0
+    M <- as.matrix(alldat[,ix.X, drop=FALSE])
+    Cov <- as.matrix(alldat[,ix.N, drop=FALSE])
+    colnames(M) <- colnames(Cov) <- sampleNames
+
+    ## order CG sites according to positions
+    idx <- split(1:length(alldat$chr), alldat$chr)
+    M.ordered <- M
+    Cov.ordered <- Cov
+    pos.ordered <- alldat$pos
+
+    for( i in seq(along=idx) ) {
+        thisidx = idx[[i]]
+        thispos = alldat$pos[ thisidx ]
+        dd = diff(thispos)
+        if( min(dd)<0 ) { # not ordered
+            warning( paste0("CG positions in chromosome ",  names(idx)[i], " is not ordered. Reorder CG sites.\n") )
+            iii = order(thispos)
+            M.ordered[thisidx, ] <- M[thisidx, ][iii,]
+            Cov.ordered[thisidx, ] <- Cov[thisidx, ][iii,]
+            pos.ordered[thisidx] <- alldat$pos[thisidx][iii]
+        }
+    }
+
+    result <- list(chr=alldat$chr, pos=pos.ordered, M=M.ordered, Cov=Cov.ordered)
+
+
+    result
+}
