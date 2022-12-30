@@ -192,14 +192,15 @@ Now we will create a single dataframe containing data for all samples and
 generate our summary metrics.
 
 ```{r}
-# Create a single dataframe with data for all samples
+# Create a single GRanges obect with data for all samples and a dataframe for summaries
 combined_files <- Reduce(c,listGRanges)
+combined_files_df<-data.frame(combined_files)
 ```
 
 ### How many CpG sites worth of data do we have across all samples combined?
 
 ```{r}
-# How many rows of data in combined table?
+# How many rows of data in combined GRange object?
 length(combined_files)
 ```
 
@@ -207,7 +208,7 @@ Lets create a table to summarize useful metrics about the CpG sites
 
 ```{r}
 # Create table of unique positions and mu/theta values
-mu_theta <- unique(subset(as.data.frame(combined_files), 
+mu_theta <- unique(subset(combined_files_df, 
                     select=-c(x,n,pVal, isHypo, pAdj, effSize, sampleID)))
 ```
 
@@ -215,7 +216,7 @@ mu_theta <- unique(subset(as.data.frame(combined_files),
 
 ```{r}
 #Number of unique samples
-length(unique(combined_files$sampleID))
+length(unique(combined_files_df$sampleID))
 
 #Number of unique CpG sites
 nrow(unique(mu_theta))
@@ -234,7 +235,7 @@ Now let's look at the distribitions of other important values.
 ```{r}
 # Create table of unique positions and depth/p-val/padj for each position in 
 # each case
-depth_pvals_eff <- unique(combined_files)
+depth_pvals_eff <- unique(combined_files_df)
 ```
 
 ### Summary of read depth distributions
@@ -280,7 +281,7 @@ called significant (p \<= 0.05):
 ```{r}
 # Detection of outliers based on number of significant sites
 # Count significant CpG sites per patient
-signif_only <- subset(combined_files, pVal <= 0.05)
+signif_only <- subset(combined_files_df, pVal <= 0.05)
 signif_counts <- dplyr::count(as.data.frame(signif_only),sampleID)
 
 # Calculate the percentiles of the number of significant sites
@@ -297,7 +298,7 @@ Let's also have a look at which site is most significant.
 
 ```{r}
 # What is the most significant CpG site between all samples?
-subset(combined_files, pVal == min(combined_files$pVal))
+subset(combined_files_df, pVal == min(combined_files$pVal))
 ```
 
 --------------------------------------------------------------------------------
